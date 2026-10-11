@@ -1,0 +1,13 @@
+pl 47: Premier League season=2026/2027 matches=380 finished=59
+ll 87: LaLiga season=2026/2027 matches=380 finished=77
+sa 55: Serie A season=2026/2027 matches=380 finished=57
+bl 54: Bundesliga season=2026/2027 matches=306 finished=45
+l1 53: Ligue 1 season=2026/2027 matches=306 finished=53
+cl 42: Champions League season=2026/2027 matches=144 finished=18
+el 73: Europa League season=2026/2027 matches=144 finished=18
+fa 132: FA Cup season=2025/2026 matches=123 finished=123
+efl 133: EFL Cup season=2026/2027 matches=82 finished=74
+cdr 138: Copa del Rey season=2026/2027 matches=54 finished=0
+cit 141: Coppa Italia season=2026/2027 matches=45 finished=28
+dfb 209: DFB Pokal season=2026/2027 matches=48 finished=32
+cdf 134: Coupe de France season=2025/2026 matches=362 finished=362
