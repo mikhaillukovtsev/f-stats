@@ -75,16 +75,50 @@ def probe_sofa():
 
 def probe_fotmob():
     log("=== FotMob ===")
-    for m in ("plain", "chrome"):
-        try:
-            r = fetch("https://www.fotmob.com/api/leagues?id=47", m)
-            log(f"  leagues [{m}]: HTTP {r.status_code}")
-        except Exception as e:
-            log(f"  leagues [{m}]: сбой {type(e).__name__}")
+    paths = ["/api/data/leagues?id=47", "/api/data/leagues?id=47&ccode3=NLD",
+             "/api/leagues?id=47&ccode3=NLD", "/api/data/matches?date=20261004"]
+    ok = None
+    for p in paths:
+        for m in ("plain", "chrome"):
+            try:
+                r = fetch("https://www.fotmob.com" + p, m)
+                log(f"  {p} [{m}]: HTTP {r.status_code}, {len(r.content)} байт")
+                if r.status_code == 200 and "leagues" in p and not ok:
+                    ok = (p, m, r)
+            except Exception as e:
+                log(f"  {p} [{m}]: сбой {type(e).__name__}")
+    if not ok:
+        return
+    p, m, r = ok
+    d = r.json()
+    log("  ключи ответа:", ", ".join(list(d.keys())[:15]))
+    mid = None
+    try:
+        allm = d["fixtures"]["allMatches"]
+        done = [x for x in allm if x.get("status", {}).get("finished")]
+        mid = done[-1]["id"] if done else None
+        log(f"  матчей в сезоне: {len(allm)}, сыграно: {len(done)}")
+    except Exception as e:
+        log("  не нашёл список матчей:", type(e).__name__, e)
+    if mid:
+        for mp in (f"/api/data/matchDetails?matchId={mid}", f"/api/matchDetails?matchId={mid}"):
+            r2 = fetch("https://www.fotmob.com" + mp, m)
+            log(f"  {mp.split('?')[0]} [{m}]: HTTP {r2.status_code}, {len(r2.content)} байт")
+            if r2.status_code == 200:
+                try:
+                    stats = r2.json()["content"]["stats"]["Periods"]
+                    for per, v in stats.items():
+                        names = [i["title"] for g in v["stats"] for i in g.get("stats", [])]
+                        want = [n for n in names if any(k in n.lower() for k in
+                                ("corner", "yellow", "expected", "on target", "fouls", "offside"))]
+                        log(f"    период {per}: {', '.join(want)}")
+                except Exception as e:
+                    log("    статистика не разобрана:", type(e).__name__, e)
+                break
 
 
 if __name__ == "__main__":
-    for f in (probe_sofa, probe_fotmob):
+    for f in (probe_fotmob,):
         try:
             f()
         except Exception:
