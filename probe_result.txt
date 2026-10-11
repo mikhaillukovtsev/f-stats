@@ -1,0 +1,9 @@
+=== SofaScore ===
+  www.sofascore.com [plain]: HTTP 403
+  www.sofascore.com [chrome]: HTTP 403
+  api.sofascore.com [plain]: HTTP 403
+  api.sofascore.com [chrome]: HTTP 403
+  Итог: SofaScore недоступен
+=== FotMob ===
+  leagues [plain]: HTTP 404
+  leagues [chrome]: HTTP 404
