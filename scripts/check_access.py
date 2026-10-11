@@ -9,6 +9,14 @@ import sys
 import urllib.parse
 import urllib.request
 
+_lines = []
+_print = print
+
+
+def print(*a, **k):  # дублируем вывод в файл, чтобы результат был виден в репозитории
+    _lines.append(" ".join(str(x) for x in a))
+    _print(*a, **k)
+
 BASE = "https://v3.football.api-sports.io"
 KEY = os.environ.get("API_FOOTBALL_KEY", "").strip()
 SEASON = int(os.environ.get("SEASON", "2026"))
@@ -73,4 +81,11 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        code = main()
+    except Exception as e:  # сетевые ошибки и т.п.
+        print("Сбой:", type(e).__name__, e)
+        code = 3
+    with open("check_result.txt", "w", encoding="utf-8") as f:
+        f.write("\n".join(_lines) + "\n")
+    sys.exit(code)
