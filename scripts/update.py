@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 API = "https://www.fotmob.com/api/data"
 HEADERS = {"User-Agent": "Mozilla/5.0 (f-stats personal project)"}
 KEEP_DAYS = 90
+SCHEMA = 2                   # версия формата статистики; при росте старые матчи перекачиваются
 MAX_DETAILS_PER_RUN = 400   # защита от слишком долгого первого запуска
 DELAY = 0.8                  # пауза между запросами, чтобы не нагружать сайт
 
@@ -102,6 +103,7 @@ STAT_KEYS = {
     "y": "yellow_cards",
     "f": "fouls",
     "o": "Offsides",
+    "pos": "BallPossesion",
 }
 
 
@@ -255,7 +257,9 @@ def main():
     result = []
     for code, m in sorted(finished, key=lambda x: x[1]["status"]["utcTime"], reverse=True):
         rec = known.get(m["id"])
-        need = rec is None or (rec.get("s") is None and rec.get("tries", 0) < 3)
+        need = (rec is None
+                or (rec.get("s") is None and rec.get("tries", 0) < 3)
+                or (rec.get("s") is not None and rec.get("v", 1) < SCHEMA))
         if need and fetched < MAX_DETAILS_PER_RUN:
             try:
                 stats = parse_details(get(f"/matchDetails?matchId={m['id']}"))
@@ -263,10 +267,14 @@ def main():
             except Exception as e:  # noqa: BLE001
                 print(f"  матч {m['id']}: {type(e).__name__}")
                 stats, failed = None, failed + 1
+            if stats is None and rec and rec.get("s"):
+                result.append(rec)  # не затираем уже собранную статистику
+                continue
             rec = {
                 "id": m["id"], "c": code, "r": str(m.get("roundName") or m.get("round") or ""),
                 "t": m["status"]["utcTime"], "h": str(m["home"]["id"]), "a": str(m["away"]["id"]),
                 "s": stats, "tries": (rec or {}).get("tries", 0) + (0 if stats else 1),
+                "v": SCHEMA,
             }
             if rec["s"] is None:  # хотя бы счёт из списка матчей
                 sc = re.match(r"\s*(\d+)\s*-\s*(\d+)", m["status"].get("scoreStr", ""))
