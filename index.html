@@ -208,6 +208,10 @@ h3{font-family:var(--display);font-weight:600;font-size:20px;margin:0;line-heigh
 .mlist th{text-align:left;font-weight:500;color:var(--muted);font-size:13px;padding:0 8px 6px 0}
 .mlist td{padding:8px 8px 8px 0;border-top:1px solid var(--line);vertical-align:middle}
 .mlist .sc{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.mlist .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.mlist th.num{text-align:right}
+.mv{display:inline-block;min-width:22px;padding:1px 6px;border-radius:5px;text-align:center;font-weight:600}
+.mv.hot{background:var(--bar);color:#fff}
 .mlist a{text-decoration:none}.mlist a:hover{text-decoration:underline}
 .tbl-wrap{overflow-x:auto}
 .demo{font-size:13px;color:var(--muted);text-align:center;margin-top:24px}
@@ -464,15 +468,15 @@ class BarChart{
 let tFilter="all";const tHalf={};const tLine={};let charts={};let curTeam=null;
 const H3=(a,b,c)=>(r,h)=>h==="1"?b(r):h==="2"?c(r):a(r);
 const CHARTS=[
-  {key:"gf",tab:"Голы",title:"Забитые голы",halves:1,get:H3(r=>r.gf,r=>r.own.g1,r=>r.own.g2)},
-  {key:"ga",tab:"Пропущенные",title:"Пропущенные голы",halves:1,get:H3(r=>r.ga,r=>r.opp.g1,r=>r.opp.g2)},
-  {key:"xg",tab:"xG",title:"xG",halves:1,decimals:1,step:.5,get:H3(r=>r.own.xg,r=>r.own.xg1,r=>r.own.xg2)},
-  {key:"pos",tab:"Владение",title:"Владение мячом",halves:1,unit:"%",max:100,step:5,avgDec:0,get:H3(r=>r.own.pos,r=>r.own.pos1,r=>r.own.pos2)},
-  {key:"sot",tab:"Удары в створ",title:"Удары в створ",halves:1,get:H3(r=>r.own.sot,r=>r.own.sot1,r=>r.own.sot2)},
-  {key:"c",tab:"Угловые",title:"Угловые",halves:1,get:H3(r=>r.own.c,r=>r.own.c1,r=>r.own.c2)},
-  {key:"y",tab:"Жёлтые",title:"Жёлтые карточки",halves:1,get:H3(r=>r.own.y,r=>r.own.y1,r=>r.own.y2)},
-  {key:"f",tab:"Фолы",title:"Фолы",halves:1,get:H3(r=>r.own.f,r=>r.own.f1,r=>r.own.f2)},
-  {key:"o",tab:"Офсайды",title:"Офсайды",halves:1,get:H3(r=>r.own.o,r=>r.own.o1,r=>r.own.o2)}
+  {key:"gf",tab:"Голы",title:"Забитые голы",halves:1,get:H3(r=>r.gf,r=>r.own.g1,r=>r.own.g2),other:H3(r=>r.ga,r=>r.opp.g1,r=>r.opp.g2),col:"Счёт",noScore:1},
+  {key:"ga",tab:"Пропущенные",title:"Пропущенные голы",halves:1,get:H3(r=>r.ga,r=>r.opp.g1,r=>r.opp.g2),other:H3(r=>r.gf,r=>r.own.g1,r=>r.own.g2),oppFirst:1,col:"Счёт",noScore:1},
+  {key:"xg",tab:"xG",title:"xG",halves:1,decimals:1,step:.5,get:H3(r=>r.own.xg,r=>r.own.xg1,r=>r.own.xg2),other:H3(r=>r.opp.xg,r=>r.opp.xg1,r=>r.opp.xg2),col:"xG"},
+  {key:"pos",tab:"Владение",title:"Владение мячом",halves:1,unit:"%",max:100,step:5,avgDec:0,get:H3(r=>r.own.pos,r=>r.own.pos1,r=>r.own.pos2),other:H3(r=>r.opp.pos,r=>r.opp.pos1,r=>r.opp.pos2),col:"Владение",noSum:1},
+  {key:"sot",tab:"Удары в створ",title:"Удары в створ",halves:1,get:H3(r=>r.own.sot,r=>r.own.sot1,r=>r.own.sot2),other:H3(r=>r.opp.sot,r=>r.opp.sot1,r=>r.opp.sot2),col:"Удары в створ"},
+  {key:"c",tab:"Угловые",title:"Угловые",halves:1,get:H3(r=>r.own.c,r=>r.own.c1,r=>r.own.c2),other:H3(r=>r.opp.c,r=>r.opp.c1,r=>r.opp.c2),col:"Угловые"},
+  {key:"y",tab:"Жёлтые",title:"Жёлтые карточки",halves:1,get:H3(r=>r.own.y,r=>r.own.y1,r=>r.own.y2),other:H3(r=>r.opp.y,r=>r.opp.y1,r=>r.opp.y2),col:"Жёлтые"},
+  {key:"f",tab:"Фолы",title:"Фолы",halves:1,get:H3(r=>r.own.f,r=>r.own.f1,r=>r.own.f2),other:H3(r=>r.opp.f,r=>r.opp.f1,r=>r.opp.f2),col:"Фолы"},
+  {key:"o",tab:"Офсайды",title:"Офсайды",halves:1,get:H3(r=>r.own.o,r=>r.own.o1,r=>r.own.o2),other:H3(r=>r.opp.o,r=>r.opp.o1,r=>r.opp.o2),col:"Офсайды"}
 ];
 let tMetric="gf";
 try{const v=localStorage.getItem("metric");if(CHARTS.some(c=>c.key===v))tMetric=v}catch(e){}
@@ -506,9 +510,7 @@ function renderTeam(id){
     <div class="ch-foot"><span class="hitrate"></span><span class="linectl">Линия<span class="stepper"><button data-line="${c.key}" data-d="-1" aria-label="Опустить линию">−</button><output></output><button data-line="${c.key}" data-d="1" aria-label="Поднять линию">+</button></span></span><button class="reset" data-reset="${c.key}" hidden>Сбросить масштаб</button></div>
   </div>
   <p class="hint">Значения за матч. Колёсико мыши меняет масштаб графика, перетаскивание сдвигает по датам. Сплошную линию двигают кнопки «−» и «+»: столбики выше неё выделены цветом.</p>
-  <div class="panel"><h2>Матчи за период</h2>${rows.length?`<div class="tbl-wrap"><table class="mlist"><thead><tr><th>Дата</th><th>Турнир</th><th>Соперник</th><th></th><th>Счёт</th></tr></thead><tbody>
-    ${rows.slice().reverse().map(r=>`<tr><td>${shortDate(r.m.ko)}</td><td class="muted">${esc(COMPS[r.m.comp].name)}</td><td><a href="#/team/${r.oppId}">${tname(r.oppId)}</a></td><td class="muted">${r.home?"дома":"в гостях"}</td><td class="sc"><a href="#/match/${r.m.id}">${r.gf}:${r.ga}</a> <span class="chip ${r.res}" style="width:22px;height:22px;font-size:12px;margin-left:4px">${RL[r.res]}</span></td></tr>`).join("")}
-  </tbody></table></div>`:'<p class="muted" style="margin:0">Нет матчей за этот период.</p>'}</div>`;
+  <div class="panel" id="mlist"></div>`;
   charts={};
   const card=main.querySelector(".chart-card");
   const resetBtn=card.querySelector(".reset"),hit=card.querySelector(".hitrate"),out=card.querySelector("output");
@@ -517,10 +519,31 @@ function renderTeam(id){
     resetBtn.hidden=!z;const L=ch.line;out.textContent=L==null?"–":fmt(L,L%1?1:0)+U;
     hit.innerHTML=n?`Больше ${fmt(L,L%1?1:0)}${U}: <b>${above} из ${n}</b> (${Math.round(above/n*100)}%)`:"";
   }});
-  charts[c.key]={ch,c,rows};applyChart(c.key,false);
+  charts[c.key]={ch,c,rows};applyChart(c.key,false);renderMList();
   const on=card.querySelector(".mtabs .on");if(on)on.scrollIntoView({block:"nearest",inline:"nearest"});
 }
 
+function renderMList(){
+  const box=document.getElementById("mlist");if(!box)return;
+  const o=Object.values(charts)[0];if(!o)return;
+  const {c,rows}=o,h=tHalf[c.key]||"m",L=tLine[lineKey(c)],U=c.unit||"",RL={w:"В",d:"Н",l:"П"};
+  const f=v=>v==null?"–":(c.decimals?fmt(v,2):v)+U;
+  const half=HALF_LBL[h]?`, ${h}-й тайм`:"";
+  const list=rows.slice().reverse();
+  if(!list.length){box.innerHTML='<h2>Матчи за период</h2><p class="muted" style="margin:0">Нет матчей за этот период.</p>';return}
+  const above=list.filter(r=>{const v=c.get(r,h);return v!=null&&L!=null&&v>L}).length,known=list.filter(r=>c.get(r,h)!=null).length;
+  box.innerHTML=`<div class="sec-head"><h2>${esc(c.col)} по матчам${half}</h2>${known&&L!=null?`<span class="muted">выше линии ${fmt(L,L%1?1:0)}${U}: ${above} из ${known}</span>`:""}</div>
+  <div class="tbl-wrap"><table class="mlist"><thead><tr><th>Дата</th><th>Турнир</th><th>Соперник</th><th></th><th class="num">${c.oppFirst?"Забито : пропущено":"Команда : соперник"}</th>${c.noSum?"":'<th class="num">Всего</th>'}${c.noScore?"":'<th class="num">Счёт</th>'}</tr></thead><tbody>
+  ${list.map(r=>{const v=c.get(r,h),w=c.other(r,h);const hot=v!=null&&L!=null&&v>L;
+    const cell=x=>`<span class="mv${hot?" hot":""}">${f(x)}</span>`;
+    const pair=c.oppFirst?`${f(w)} : ${cell(v)}`:`${cell(v)} : ${f(w)}`;
+    const sum=v!=null&&w!=null?(c.decimals?fmt(v+w,2):v+w):"–";
+    return`<tr><td>${shortDate(r.m.ko)}</td><td class="muted">${esc(COMPS[r.m.comp].name)}</td><td><a href="#/team/${r.oppId}">${tname(r.oppId)}</a></td><td class="muted">${r.home?"дома":"в гостях"}</td>
+    <td class="sc num"><a href="#/match/${r.m.id}">${pair}</a>${c.noScore?` <span class="chip ${r.res}" style="width:22px;height:22px;font-size:12px;margin-left:4px">${RL[r.res]}</span>`:""}</td>
+    ${c.noSum?"":`<td class="num">${sum}</td>`}
+    ${c.noScore?"":`<td class="num muted">${r.gf}:${r.ga} <span class="chip ${r.res}" style="width:22px;height:22px;font-size:12px;margin-left:4px">${RL[r.res]}</span></td>`}</tr>`}).join("")}
+  </tbody></table></div>`;
+}
 const lineKey=c=>c.key+(tHalf[c.key]||"m");
 function applyChart(key,keep){
   const o=charts[key],data=chartData(o.c,o.rows),lk=lineKey(o.c);
@@ -557,12 +580,12 @@ main.addEventListener("click",e=>{
     if(name==="mf"){mFilter=v;renderMatch(route.split("/")[2])}
     else if(name==="tf"){tFilter=v;const y=window.scrollY;renderTeam(route.split("/")[2]);window.scrollTo(0,y)}
     else if(name==="per"){period=v;try{localStorage.setItem("period",v)}catch(e){}const y=window.scrollY;if(/^#\/team\//.test(route))renderTeam(route.split("/")[2]);else renderMatch(route.split("/")[2]);window.scrollTo(0,y)}
-    else if(name.startsWith("half-")){const k=name.slice(5);tHalf[k]=v;applyChart(k,true);
+    else if(name.startsWith("half-")){const k=name.slice(5);tHalf[k]=v;applyChart(k,true);renderMList();
       s.parentElement.querySelectorAll("button").forEach(b=>{b.classList.toggle("on",b===s);b.setAttribute("aria-pressed",b===s)})}
     return}
   const lb=e.target.closest("[data-line]");
   if(lb){const o=charts[lb.dataset.line],lk=lineKey(o.c),step=o.c.step||1;
-    tLine[lk]=clamp(Math.round((tLine[lk]+Number(lb.dataset.d)*step)*2)/2,step===5?5:0.5,o.c.max?o.c.max-5:99);o.ch.setLine(tLine[lk]);return}
+    tLine[lk]=clamp(Math.round((tLine[lk]+Number(lb.dataset.d)*step)*2)/2,step===5?5:0.5,o.c.max?o.c.max-5:99);o.ch.setLine(tLine[lk]);renderMList();return}
   const mt=e.target.closest("[data-metric]");
   if(mt){tMetric=mt.dataset.metric;try{localStorage.setItem("metric",tMetric)}catch(e){}const y=window.scrollY;renderTeam(route.split("/")[2]);window.scrollTo(0,y);main.querySelector(`[data-metric="${tMetric}"]`).focus({preventScroll:true});return}
   const rs=e.target.closest("[data-reset]");
