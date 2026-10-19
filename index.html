@@ -258,7 +258,7 @@ const BACK='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="
 
 /* ---------- data (загружается из data/*.json) ---------- */
 const COLORS={pl:"#6A2C91",ll:"#E0453A",sa:"#1B7FC4",bl:"#C8102E",l1:"#3A5BA9",cl:"#2E4BB8",el:"#F28C00"};
-let COMPS={},ORDER=[],TEAMS={},MATCHES=[],UPCOMING={},MBYID={},STANDINGS={},UPDATED=null;
+let COMPS={},ORDER=[],TEAMS={},MATCHES=[],UPCOMING={},NEXT={},MBYID={},STANDINGS={},UPDATED=null;
 function hash(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))|0;return Math.abs(h)}
 function initials(name){
   const skip=new Set(["FC","AC","AS","SC","VfL","VfB","TSG","FSV","RB","CP","FK","FF","1."]);
@@ -285,13 +285,13 @@ async function load(){
     const st=m.s?{h:side(m.s.h),a:side(m.s.a)}:{h:{g:m.score?m.score[0]:null},a:{g:m.score?m.score[1]:null}};
     return{id:m.id,comp:m.c,round:roundLabel(m.c,m.r),home:m.h,away:m.a,ko:Date.parse(m.t),stats:st,done:true};
   }).filter(m=>m.stats.h.g!=null);
-  for(const c of ORDER){const u=meta.upcoming[c]||{matches:[],round:""};
-    UPCOMING[c]=u.matches.filter(m=>TEAMS[m.h]&&TEAMS[m.a]).map(m=>({id:m.id,comp:c,round:u.round,home:m.h,away:m.a,ko:Date.parse(m.t),live:m.live}))}
-  MBYID=Object.fromEntries([...MATCHES,...Object.values(UPCOMING).flat()].map(m=>[m.id,m]));
+  const conv=(c,u)=>u?u.matches.filter(m=>TEAMS[m.h]&&TEAMS[m.a]).map(m=>({id:m.id,comp:c,round:u.round,home:m.h,away:m.a,ko:Date.parse(m.t),live:m.live})):[];
+  for(const c of ORDER){const u=meta.upcoming[c]||{matches:[],round:""};UPCOMING[c]=conv(c,u);NEXT[c]=conv(c,u.next)}
+  MBYID=Object.fromEntries([...MATCHES,...Object.values(UPCOMING).flat(),...Object.values(NEXT).flat()].map(m=>[m.id,m]));
   ALL=Object.values(TEAMS).sort((a,b)=>a.name.localeCompare(b.name));
 }
 const status=m=>{if(m.done)return"finished";const n=Date.now();if(n>m.ko+150*MIN)return"finished";return(m.live||n>=m.ko)?"live":"scheduled"};
-const upcoming=comp=>(UPCOMING[comp]||[]).filter(m=>status(m)!=="finished").sort((a,b)=>a.ko-b.ko);
+const upcoming=comp=>{const pick=a=>(a||[]).filter(m=>status(m)!=="finished").sort((x,y)=>x.ko-y.ko);const cur=pick(UPCOMING[comp]);return cur.length?cur:pick(NEXT[comp])};
 const standing=(comp,id)=>(STANDINGS[comp]||{})[id];
 
 const PERIODS=[["30","1 месяц"],["45","1,5 месяца"],["90","3 месяца"]];

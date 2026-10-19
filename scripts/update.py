@@ -160,27 +160,29 @@ def parse_details(d):
 
 # ---------- определение текущего тура ----------
 
-def current_round(matches):
-    """Тур, который сейчас идёт или будет следующим.
+def rounds_ahead(matches):
+    """Тур, который сейчас идёт или будет следующим, и его оставшиеся матчи.
 
-    Берём туры, в которых ещё остались несыгранные матчи, и выбираем самый ранний
-    по времени, где несыгранных хотя бы треть (так отсекаются одиночные перенесённые игры).
+    Тур считается текущим, пока в нём есть несыгранные матчи «по расписанию».
+    Перенесённые игры (сыгранные сильно позже основной части тура) не держат тур
+    открытым и в список не попадают.
     """
+    POSTPONED_GAP = timedelta(days=4)
     by_round = {}
     for m in matches:
+        if m["status"].get("cancelled"):
+            continue
         by_round.setdefault(m["round"], []).append(m)
     candidates = []
     for rnd, ms in by_round.items():
-        left = [m for m in ms if not m["status"].get("finished") and not m["status"].get("cancelled")]
-        if not left:
-            continue
-        if len(left) >= max(1, len(ms) / 3):
-            first = min(parse_time(m["status"]["utcTime"]) for m in left)
-            candidates.append((first, rnd, left))
-    if not candidates:
-        return None, []
-    _, rnd, left = min(candidates, key=lambda x: x[0])
-    return rnd, sorted(left, key=lambda m: m["status"]["utcTime"])
+        times = sorted(parse_time(m["status"]["utcTime"]) for m in ms)
+        median = times[len(times) // 2]
+        left = [m for m in ms if not m["status"].get("finished")
+                and parse_time(m["status"]["utcTime"]) - median <= POSTPONED_GAP]
+        if left:
+            candidates.append((median, rnd, left))
+    candidates.sort(key=lambda x: x[0])
+    return [(rnd, sorted(left, key=lambda m: m["status"]["utcTime"])) for _, rnd, left in candidates[:2]]
 
 
 def round_label(code, rnd, round_name):
@@ -224,9 +226,8 @@ def main():
                     finished.append((code, m))
 
         if code in MAIN:
-            rnd, left = current_round(fixtures)
-            upcoming[code] = {
-                "title": title,
+            ahead = rounds_ahead(fixtures)
+            pack = lambda rnd, left: {
                 "round": round_label(code, rnd, left[0].get("roundName") if left else None),
                 "matches": [{
                     "id": m["id"], "t": m["status"]["utcTime"],
@@ -234,6 +235,9 @@ def main():
                     "live": bool(m["status"].get("started")) and not m["status"].get("finished"),
                 } for m in left],
             }
+            cur = pack(*ahead[0]) if ahead else {"round": "", "matches": []}
+            upcoming[code] = {"title": title, **cur,
+                              "next": pack(*ahead[1]) if len(ahead) > 1 else None}
             table = {}
             for block in d.get("table") or []:
                 data = block.get("data") or {}
