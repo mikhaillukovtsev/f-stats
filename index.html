@@ -257,7 +257,7 @@ const STAR='<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><
 const BACK='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
 
 /* ---------- data (загружается из data/*.json) ---------- */
-const COLORS={pl:"#6A2C91",ll:"#E0453A",sa:"#1B7FC4",bl:"#C8102E",l1:"#3A5BA9",cl:"#2E4BB8",el:"#F28C00"};
+const COLORS={pl:"#6A2C91",ll:"#E0453A",sa:"#1B7FC4",bl:"#C8102E",l1:"#3A5BA9",cl:"#2E4BB8",el:"#F28C00",efl:"#1F8A4C"};
 let COMPS={},ORDER=[],TEAMS={},MATCHES=[],UPCOMING={},NEXT={},MBYID={},STANDINGS={},UPDATED=null;
 function hash(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))|0;return Math.abs(h)}
 function initials(name){
@@ -359,7 +359,7 @@ const METRICS=[["Забитые голы",r=>r.gf],["Пропущенные го
 const vals=(rows,f)=>rows.map(f).filter(v=>v!=null);
 const avg=(rows,f)=>{const v=vals(rows,f);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0};
 const has=(rows,f)=>vals(rows,f).length>0;
-function placeLine(comp,id){const s=standing(comp,id);if(!s)return"нет матчей в турнире";return`${s.pos}-е место, ${s.pts} ${plural(s.pts,"очко","очка","очков")}`}
+function placeLine(comp,id){let s=standing(comp,id),pre="";if(!s&&TEAMS[id].league&&TEAMS[id].league!==comp){s=standing(TEAMS[id].league,id);pre=COMPS[TEAMS[id].league].name+": "}if(!s)return"";if(pre)return`${pre}${s.pos}-е место`;return`${s.pos}-е место, ${s.pts} ${plural(s.pts,"очко","очка","очков")}`}
 function renderMatch(id){
   const m=MBYID[id];if(!m){main.innerHTML='<p class="muted">Матч не найден.</p>';return}
   const st=status(m);const C=COMPS[m.comp];

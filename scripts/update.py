@@ -30,11 +30,11 @@ MAIN = {
     "l1": (53, "Лига 1"),
     "cl": (42, "Лига чемпионов"),
     "el": (73, "Лига Европы"),
+    "efl": (133, "Кубок английской лиги"),
 }
 # Кубки: только для статистики команд.
 CUPS = {
     "fa": (132, "Кубок Англии"),
-    "efl": (133, "Кубок английской лиги"),
     "cdr": (138, "Кубок Испании"),
     "cit": (141, "Кубок Италии"),
     "dfb": (209, "Кубок Германии"),
@@ -185,9 +185,14 @@ def rounds_ahead(matches):
     return [(rnd, sorted(left, key=lambda m: m["status"]["utcTime"])) for _, rnd, left in candidates[:2]]
 
 
+CUP_ROUNDS = {"1/8": "1/8 финала", "1/4": "1/4 финала", "1/2": "1/2 финала", "final": "Финал"}
+
+
 def round_label(code, rnd, round_name):
     if rnd is None:
         return ""
+    if code in CUPS or code == "efl":
+        return f"{rnd}-й раунд" if str(rnd).isdigit() else CUP_ROUNDS.get(str(rnd).lower(), str(round_name or rnd))
     if code in ("cl", "el"):
         return f"{rnd}-й игровой день" if str(rnd).isdigit() else str(round_name or rnd)
     return f"{rnd}-й тур" if str(rnd).isdigit() else str(round_name or rnd)
