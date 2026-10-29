@@ -40,6 +40,10 @@ CUPS = {
     "dfb": (209, "Кубок Германии"),
     "cdf": (134, "Кубок Франции"),
 }
+# Лиги только для статистики: на главной не показываются.
+EXTRA = {
+    "rpl": (63, "РПЛ"),
+}
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
@@ -211,7 +215,8 @@ def main():
     upcoming = {}    # code -> {round, matches}
     finished = []    # (code, fixture)
 
-    for code, (lid, title) in {**MAIN, **CUPS}.items():
+    source_names = {}
+    for code, (lid, title) in {**MAIN, **CUPS, **EXTRA}.items():
         print(f"{title}...")
         try:
             d = get(f"/leagues?id={lid}")
@@ -223,14 +228,15 @@ def main():
             for side in ("home", "away"):
                 t = m[side]
                 teams.setdefault(str(t["id"]), {"name": t["name"], "short": t.get("shortName") or t["name"]})
-                if code in MAIN:
+                if code in MAIN or code in EXTRA:
                     main_teams.add(str(t["id"]))
             st = m["status"]
             if st.get("finished") and not st.get("cancelled") and not st.get("awarded"):
                 if parse_time(st["utcTime"]) >= cutoff:
                     finished.append((code, m))
 
-        if code in MAIN:
+        source_names[code] = (d.get("details") or {}).get("name")
+        if code in MAIN or code in EXTRA:
             ahead = rounds_ahead(fixtures)
             pack = lambda rnd, left: {
                 "round": round_label(code, rnd, left[0].get("roundName") if left else None),
@@ -299,7 +305,8 @@ def main():
             used.update((m["h"], m["a"]))
     meta = {
         "updated": NOW.isoformat(timespec="seconds"),
-        "comps": {c: t for c, (_, t) in {**MAIN, **CUPS}.items()},
+        "comps": {c: t for c, (_, t) in {**MAIN, **CUPS, **EXTRA}.items()},
+        "sourceNames": source_names,
         "order": list(MAIN),
         "upcoming": upcoming,
         "standings": standings,
