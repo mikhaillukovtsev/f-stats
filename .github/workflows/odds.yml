@@ -1,0 +1,44 @@
+name: Линия Фонбета
+
+on:
+  schedule:
+    - cron: "17 7 * * *"   # раз в день, ~07:17 UTC (фактически GitHub может запустить позже)
+  workflow_dispatch:
+    inputs:
+      tournaments:
+        description: "Принудительно: коды турниров через запятую (pl,ll,sa,bl,l1,cl,el,efl,rpl)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  odds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Загрузить линию
+        env:
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+          ODDS_TOURNAMENTS: ${{ github.event.inputs.tournaments }}
+        run: python scripts/odds.py
+      - name: Посчитать перевесы
+        run: python scripts/value.py
+      - name: Сохранить изменения
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then echo "Без изменений"; exit 0; fi
+          git commit -m "Линия $(date -u +'%Y-%m-%d %H:%M') UTC"
+          git pull --rebase -q
+          git push

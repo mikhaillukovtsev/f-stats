@@ -127,6 +127,23 @@ h3{font-family:var(--display);font-weight:600;font-size:20px;margin:0;line-heigh
 .seg button{border:0;background:none;padding:5px 12px;border-radius:6px;cursor:pointer;color:var(--muted);font-size:14px;font-weight:500;white-space:nowrap}
 .seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .seg.sm button{padding:3px 9px;font-size:13px}
+.bets-f{margin-top:14px}
+.bets-f .bf-row{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:12px;font-size:15px}
+.bets-f input[type=number]{width:70px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);color:var(--ink);font:inherit;margin-left:4px}
+.bf-chk{display:flex;align-items:center;gap:6px;cursor:pointer}
+.bets-f .seg{flex-wrap:wrap}
+.bet-m{padding:0}
+.bet-h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--line)}
+.bet-h:hover{background:var(--surface-2)}
+.bet-h small{color:var(--muted);margin-left:auto}
+.bet-t{color:var(--muted);font-variant-numeric:tabular-nums}
+.bet-tb{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.bet-tb th{text-align:right;font-weight:500;color:var(--muted);font-size:12px;padding:6px 14px 4px}
+.bet-tb td{text-align:right;padding:7px 14px;border-top:1px solid var(--line)}
+.bet-tb th:first-child,.bet-tb td:first-child{text-align:left}
+.bet-tb .pos{color:#1F8A4C;font-weight:600}.bet-tb .neg{color:var(--muted)}
+.sus{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:#E0A100;color:#fff;font-size:11px}
+@media (max-width:600px){.hide-s{display:none}.bet-tb td,.bet-tb th{padding-left:8px;padding-right:8px}}
 .sec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .sec-head h2{margin:0}
 
@@ -231,6 +248,7 @@ h3{font-family:var(--display);font-weight:600;font-size:20px;margin:0;line-heigh
     </div>
     <nav class="tabs">
       <a href="#/" data-tab="list">Турниры</a>
+      <a href="#/bets" data-tab="bets">Ставки</a>
       <a href="#/fav" data-tab="fav">Избранное<span class="count" id="favCount" hidden></span></a>
     </nav>
   </div>
@@ -289,7 +307,9 @@ async function load(){
   for(const c of ORDER){const u=meta.upcoming[c]||{matches:[],round:""};UPCOMING[c]=conv(c,u);NEXT[c]=conv(c,u.next)}
   MBYID=Object.fromEntries([...MATCHES,...Object.values(UPCOMING).flat(),...Object.values(NEXT).flat()].map(m=>[m.id,m]));
   ALL=Object.values(TEAMS).sort((a,b)=>a.name.localeCompare(b.name));
+  try{const r=await fetch("data/value.json"+bust);if(r.ok)VALUE=await r.json()}catch(e){VALUE=null}
 }
+let VALUE=null;
 const status=m=>{if(m.done)return"finished";const n=Date.now();if(n>m.ko+150*MIN)return"finished";return(m.live||n>=m.ko)?"live":"scheduled"};
 const upcoming=comp=>{const pick=a=>(a||[]).filter(m=>status(m)!=="finished").sort((x,y)=>x.ko-y.ko);const cur=pick(UPCOMING[comp]);return cur.length?cur:pick(NEXT[comp])};
 const standing=(comp,id)=>(STANDINGS[comp]||{})[id];
@@ -550,21 +570,67 @@ function applyChart(key,keep){
   if(tLine[lk]==null){const av=data.length?data.reduce((a,d)=>a+d.v,0)/data.length:0;tLine[lk]=o.c.step===5?Math.round(av/5)*5:Math.floor(av)+0.5}
   o.ch.line=tLine[lk];o.ch.setData(data,keep);
 }
+/* ---------- bets ---------- */
+const KINDS=[["all","Все"],["goals","Тоталы"],["halves","Таймы"],["team","Инд. тоталы"],["result","Исход"],["corners","Угловые"]];
+let BF={lo:1.7,hi:2.1,ev:5,agree:true,kind:"all"};
+try{BF={...BF,...JSON.parse(localStorage.getItem("bf")||"{}")}}catch(e){}
+function saveBF(){try{localStorage.setItem("bf",JSON.stringify(BF))}catch(e){}}
+const pct=v=>v==null?"—":Math.round(v*100)+"%";
+function renderBets(){
+  if(!VALUE||!VALUE.bets){main.innerHTML='<div class="fav-empty"><p>Линии пока нет. Она подтягивается раз в день утром.</p></div>';return}
+  const upd=VALUE.oddsUpdated?new Date(VALUE.oddsUpdated):null;
+  main.innerHTML=`<div class="panel bets-f">
+    <div class="bf-row">
+      <label>Кэф от <input data-bf="lo" type="number" step="0.05" min="1" value="${BF.lo}"></label>
+      <label>до <input data-bf="hi" type="number" step="0.05" min="1" value="${BF.hi}"></label>
+      <label>Перевес от <input data-bf="ev" type="number" step="1" value="${BF.ev}">%</label>
+      <label class="bf-chk"><input data-bf="agree" type="checkbox" ${BF.agree?"checked":""}> Модель и факты согласны</label>
+    </div>
+    <div class="seg sm" id="bkind">${KINDS.map(([k,l])=>`<button data-bkind="${k}" class="${BF.kind===k?"on":""}">${l}</button>`).join("")}</div>
+    <p class="cmp-note">Линия Фонбета (= Пари)${upd?" от "+shortDate(upd)+" "+timeStr(upd):""}. Шанс — среднее модели и фактов за 1,5 месяца. Перевес = шанс × кэф − 1. <b class="sus">!</b> — перевес больше 25%: скорее всего модель чего-то не знает (составы, ротация), проверь.</p>
+  </div><div id="betRows"></div>`;
+  renderBetRows();
+}
+function renderBetRows(){
+  const box=document.getElementById("betRows");if(!box)return;
+  const n=Date.now();
+  const rows=VALUE.bets.filter(b=>Date.parse(b.t)>n&&b.odds>=BF.lo&&b.odds<=BF.hi&&b.ev*100>=BF.ev&&(!BF.agree||b.agree!==false)&&(BF.kind==="all"||b.kind===BF.kind));
+  if(!rows.length){box.innerHTML='<div class="fav-empty"><p>Под фильтр ничего не подошло. Ослабь перевес или расширь коэффициенты.</p></div>';return}
+  const byM=new Map();for(const b of rows){if(!byM.has(b.mid))byM.set(b.mid,[]);byM.get(b.mid).push(b)}
+  const groups=[...byM.values()].sort((x,y)=>Date.parse(x[0].t)-Date.parse(y[0].t));
+  let html="",lastDay="";
+  for(const g of groups){
+    const b0=g[0],t=Date.parse(b0.t),dk=dayKey(t);
+    if(dk!==lastDay){html+=`<div class="day">${dayStr(t)}</div>`;lastDay=dk}
+    const H=TEAMS[b0.h],A=TEAMS[b0.a],C=COMPS[b0.c];
+    html+=`<div class="comp bet-m"><div class="bet-h" data-match="${esc(b0.mid)}"><span class="bet-t">${timeStr(t)}</span><b>${esc(H?H.name:b0.h)} – ${esc(A?A.name:b0.a)}</b><small>${esc(C?C.name:b0.c)}</small></div>
+      <table class="bet-tb"><thead><tr><th>Ставка</th><th>Кэф</th><th>Шанс</th><th class="hide-s">Модель / факты</th><th class="hide-s">Справ.</th><th>Перевес</th></tr></thead><tbody>
+      ${g.sort((x,y)=>y.ev-x.ev).map(b=>`<tr><td>${esc(b.label)}${b.push>0.005?` <small class="muted">возврат ${pct(b.push)}</small>`:""}</td><td><b>${b.odds.toFixed(2)}</b></td><td>${pct(b.p)}</td><td class="hide-s muted">${pct(b.pm)} / ${pct(b.pf)}</td><td class="hide-s">${b.fair.toFixed(2)}</td><td class="${b.ev>=0?"pos":"neg"}">${b.ev>=0?"+":""}${Math.round(b.ev*100)}%${b.ev>0.25?' <b class="sus" title="Подозрительно большой перевес">!</b>':""}</td></tr>`).join("")}
+      </tbody></table></div>`;
+  }
+  box.innerHTML=html;
+}
+main.addEventListener("click",e=>{const k=e.target.closest("[data-bkind]");if(!k)return;BF.kind=k.dataset.bkind;saveBF();
+  document.querySelectorAll("#bkind button").forEach(x=>x.classList.toggle("on",x.dataset.bkind===BF.kind));renderBetRows()});
+
 /* ---------- router ---------- */
 let route="";
 function render(){
   const h=location.hash||"#/";route=h;
-  document.querySelectorAll(".tabs a").forEach(a=>a.classList.toggle("on",(a.dataset.tab==="fav"&&h==="#/fav")||(a.dataset.tab==="list"&&(h==="#/"||h==="#"))));
+  document.querySelectorAll(".tabs a").forEach(a=>a.classList.toggle("on",(a.dataset.tab==="fav"&&h==="#/fav")||(a.dataset.tab==="bets"&&h==="#/bets")||(a.dataset.tab==="list"&&(h==="#/"||h==="#"))));
   updateFavCount();
   let mm;
   if(h==="#/fav")renderFav();
+  else if(h==="#/bets")renderBets();
   else if(mm=h.match(/^#\/match\/(.+)$/))renderMatch(mm[1]);
   else if(mm=h.match(/^#\/team\/(.+)$/))renderTeam(mm[1]);
   else renderList();
 }
 let lastRoute="";
 window.addEventListener("hashchange",()=>{render();if(route!==lastRoute)window.scrollTo(0,0);lastRoute=route});
-setInterval(()=>{if(!/^#\/team\//.test(location.hash))render()},30000);
+setInterval(()=>{if(!/^#\/(team|bets)/.test(location.hash))render()},30000);
+main.addEventListener("input",e=>{const el=e.target.closest("[data-bf]");if(!el)return;const k=el.dataset.bf;
+  BF[k]=el.type==="checkbox"?el.checked:Number(String(el.value).replace(",","."));saveBF();renderBetRows()});
 
 /* ---------- events ---------- */
 main.addEventListener("click",e=>{

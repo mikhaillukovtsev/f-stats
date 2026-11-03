@@ -7,6 +7,7 @@ on:
   push:
     paths:
       - scripts/update.py
+      - scripts/value.py
       - .github/workflows/update.yml
 
 permissions:
@@ -27,6 +28,8 @@ jobs:
           python-version: "3.12"
       - name: Загрузить данные
         run: python scripts/update.py
+      - name: Пересчитать перевесы
+        run: python scripts/value.py || true
       - name: Сохранить изменения
         run: |
           git config user.name "github-actions[bot]"
