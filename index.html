@@ -133,6 +133,7 @@ h3{font-family:var(--display);font-weight:600;font-size:20px;margin:0;line-heigh
 .bf-chk{display:flex;align-items:center;gap:6px;cursor:pointer}
 .bets-f .seg{flex-wrap:wrap}
 .bet-m{padding:0}
+.cards-note{font-size:14px;color:var(--muted);line-height:1.45}
 .bet-h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--line)}
 .bet-h:hover{background:var(--surface-2)}
 .bet-h small{color:var(--muted);margin-left:auto}
@@ -571,7 +572,7 @@ function applyChart(key,keep){
   o.ch.line=tLine[lk];o.ch.setData(data,keep);
 }
 /* ---------- bets ---------- */
-const KINDS=[["all","Все"],["goals","Тоталы"],["halves","Таймы"],["team","Инд. тоталы"],["result","Исход"],["corners","Угловые"]];
+const KINDS=[["all","Все"],["goals","Тоталы"],["halves","Таймы"],["team","Инд. тоталы"],["result","Исход"],["corners","Угловые"],["cards","ЖК (без линии)"]];
 let BF={lo:1.7,hi:2.1,ev:5,agree:true,kind:"all"};
 try{BF={...BF,...JSON.parse(localStorage.getItem("bf")||"{}")}}catch(e){}
 function saveBF(){try{localStorage.setItem("bf",JSON.stringify(BF))}catch(e){}}
@@ -594,6 +595,7 @@ function renderBets(){
 function renderBetRows(){
   const box=document.getElementById("betRows");if(!box)return;
   const n=Date.now();
+  if(BF.kind==="cards")return renderCards(box,n);
   const rows=VALUE.bets.filter(b=>Date.parse(b.t)>n&&b.odds>=BF.lo&&b.odds<=BF.hi&&b.ev*100>=BF.ev&&(!BF.agree||b.agree!==false)&&(BF.kind==="all"||b.kind===BF.kind));
   if(!rows.length){box.innerHTML='<div class="fav-empty"><p>Под фильтр ничего не подошло. Ослабь перевес или расширь коэффициенты.</p></div>';return}
   const byM=new Map();for(const b of rows){if(!byM.has(b.mid))byM.set(b.mid,[]);byM.get(b.mid).push(b)}
@@ -606,6 +608,23 @@ function renderBetRows(){
     html+=`<div class="comp bet-m"><div class="bet-h" data-match="${esc(b0.mid)}"><span class="bet-t">${timeStr(t)}</span><b>${esc(H?H.name:b0.h)} – ${esc(A?A.name:b0.a)}</b><small>${esc(C?C.name:b0.c)}</small></div>
       <table class="bet-tb"><thead><tr><th>Ставка</th><th>Кэф</th><th>Шанс</th><th class="hide-s">Модель / факты / рынок</th><th class="hide-s">Справ.</th><th>Перевес</th></tr></thead><tbody>
       ${g.sort((x,y)=>y.ev-x.ev).map(b=>`<tr><td>${esc(b.label)}${b.push>0.005?` <small class="muted">возврат ${pct(b.push)}</small>`:""}</td><td><b>${b.odds.toFixed(2)}</b></td><td>${pct(b.p)}</td><td class="hide-s muted">${pct(b.pm)} / ${pct(b.pf)} / ${pct(b.pk)}</td><td class="hide-s">${b.fair.toFixed(2)}</td><td class="${b.ev>=0?"pos":"neg"}">${b.ev>=0?"+":""}${Math.round(b.ev*100)}%${b.ev>0.25?' <b class="sus" title="Подозрительно большой перевес">!</b>':""}</td></tr>`).join("")}
+      </tbody></table></div>`;
+  }
+  box.innerHTML=html;
+}
+function renderCards(box,n){
+  const lo=BF.lo-0.25,hi=BF.hi;
+  const ms=(VALUE.cards||[]).filter(c=>Date.parse(c.t)>n).map(c=>({...c,lines:c.lines.filter(l=>l.from>=lo&&l.from<=hi&&(!BF.agree||l.agree!==false))})).filter(c=>c.lines.length);
+  let html=`<div class="panel cards-note">Фонбет не отдаёт линию на жёлтые, поэтому здесь только наша оценка (модель + факты, без поправки на рынок). Открой матч в Фонбете: если кэф <b>не ниже «Брать от»</b> — ставка с перевесом от 5%. Показаны линии, где «Брать от» от ${fmt(lo,2)} до ${fmt(hi,2)}. Судью модель не знает — проверь его средние сам.</div>`;
+  if(!ms.length){box.innerHTML=html+'<div class="fav-empty"><p>Под фильтр ничего не подошло.</p></div>';return}
+  let lastDay="";
+  for(const c of ms){
+    const t=Date.parse(c.t),dk=dayKey(t);
+    if(dk!==lastDay){html+=`<div class="day">${dayStr(t)}</div>`;lastDay=dk}
+    const H=TEAMS[c.h],A=TEAMS[c.a],C=COMPS[c.c];
+    html+=`<div class="comp bet-m"><div class="bet-h" data-match="${esc(c.mid)}"><span class="bet-t">${timeStr(t)}</span><b>${esc(H?H.name:c.h)} – ${esc(A?A.name:c.a)}</b><small>${esc(C?C.name:c.c)} · ожид. ЖК ${fmt(c.ly[0],1)} + ${fmt(c.ly[1],1)}</small></div>
+      <table class="bet-tb"><thead><tr><th>Ставка</th><th>Брать от</th><th>Шанс</th><th class="hide-s">Модель / факты</th><th class="hide-s">Справ.</th></tr></thead><tbody>
+      ${c.lines.map(l=>`<tr><td>${esc(l.label)}</td><td><b>${l.from.toFixed(2)}</b></td><td>${pct(l.p)}</td><td class="hide-s muted">${pct(l.pm)} / ${pct(l.pf)}</td><td class="hide-s">${l.fair.toFixed(2)}</td></tr>`).join("")}
       </tbody></table></div>`;
   }
   box.innerHTML=html;

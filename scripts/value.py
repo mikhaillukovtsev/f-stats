@@ -110,7 +110,7 @@ def model_for(T, h, a):
     if len(ha) < MIN_MATCHES or len(aa) < MIN_MATCHES:
         return None
     lam = {}
-    for k in ("g", "xg", "c"):
+    for k in ("g", "xg", "c", "y"):
         def w(r_v, r_all, f):
             x, y = avg(r_v, f), avg(r_all, f)
             if x is None:
@@ -137,6 +137,8 @@ def model_for(T, h, a):
         "rows": (ha, aa),
         "G": joint(*g), "G1": joint(g[0] * share, g[1] * share), "G2": joint(g[0] * (1 - share), g[1] * (1 - share)),
         "C": joint(*lam["c"], disp=1.4) if lam["c"] else None,
+        "Y": joint(*lam["y"], disp=1.3, n=15) if lam["y"] else None,
+        "ly": lam["y"],
         "lam": {"g": [round(g[0], 2), round(g[1], 2)], "c": [round(x, 2) for x in lam["c"]] if lam["c"] else None},
     }
 
@@ -234,13 +236,53 @@ def fact(model, fspec):
     return ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
 
 
+CARD_MARGIN = 1.05      # «брать от» = справедливый кэф + 5%
+
+
+def card_lines(model):
+    """Тоталы ЖК без линии букмекера: модель + факты, справедливый кэф."""
+    Y, ly = model.get("Y"), model.get("ly")
+    if not Y or not ly:
+        return []
+    out = []
+    mu = ly[0] + ly[1]
+    specs = []
+    for line in sorted({math.floor(mu) - 0.5, math.floor(mu) + 0.5, math.floor(mu) + 1.5}):
+        if line > 0:
+            for over in (True, False):
+                specs.append((f"ЖК {'ТБ' if over else 'ТМ'} {line:g}", (lambda L, O: lambda i, j: payout_line(i + j, L, O))(line, over),
+                              ("both", (lambda L, O: lambda o, p: payout_line(o["y"][0] + p["y"][0], L, O)
+                                        if val(o, "y") is not None and val(p, "y") is not None else None)(line, over))))
+    for t in (0, 1):
+        m = ly[t]
+        for line in sorted({max(math.floor(m) - 0.5, 0.5), math.floor(m) + 0.5, math.floor(m) + 1.5}):
+            for over in (True, False):
+                specs.append((f"@{t} ЖК ИТ{'Б' if over else 'М'} {line:g}",
+                              (lambda L, O, T: lambda i, j: payout_line((i, j)[T], L, O))(line, over, t),
+                              ("team", t, (lambda L, O: lambda o, p: payout_line(o["y"][0], L, O) if val(o, "y") is not None else None)(line, over),
+                               (lambda L, O: lambda o, p: payout_line(p["y"][0], L, O) if val(p, "y") is not None else None)(line, over))))
+    for label, fn, fspec in specs:
+        w = sum(p * fn(i, j)[0] for i, j, p in Y)
+        fr = fact(model, fspec)
+        fw = fr[0] if fr else None
+        bw = (w + fw) / 2 if fw is not None else w
+        if bw <= 0.05:
+            continue
+        fair = 1 / bw
+        out.append({"label": label, "p": round(bw, 3), "pm": round(w, 3), "pf": round(fw, 3) if fw is not None else None,
+                    "fair": round(fair, 2), "from": round(fair * CARD_MARGIN, 2),
+                    "agree": abs(w - fw) <= AGREE if fw is not None else None})
+    return out
+
+
 def main():
     odds = load("odds.json")
     meta = load("meta.json")
     db = load("matches.json", {"matches": []})
-    if not odds or not meta:
+    if not meta:
         print("Нет данных")
         return 0
+    odds = odds or {"fixtures": []}
     T = Teams(db["matches"])
     names = meta["teams"]
     ours = []
@@ -323,8 +365,26 @@ def main():
                 "fair": round(fair, 2), "ev": round(ev, 3), "agree": agree,
             })
     bets.sort(key=lambda b: -b["ev"])
+
+    # ЖК: Фонбет их не отдаёт, поэтому считаем справедливые кэфы для всех ближайших матчей
+    cards = []
+    for m in ours:
+        t = ts(m["t"])
+        if not (NOW < t < NOW + timedelta(days=7)) or m["c"] == "rpl":
+            continue
+        model = model_for(T, m["h"], m["a"])
+        if not model:
+            continue
+        tn = (names[m["h"]]["name"], names[m["a"]]["name"])
+        lines = card_lines(model)
+        for x in lines:
+            x["label"] = x["label"].replace("@0", tn[0]).replace("@1", tn[1])
+        if lines:
+            cards.append({"mid": m["id"], "c": m["c"], "t": m["t"], "h": m["h"], "a": m["a"],
+                          "ly": [round(v, 2) for v in model["ly"]], "lines": lines})
+    cards.sort(key=lambda x: x["t"])
     out = {"updated": NOW.isoformat(timespec="seconds"), "oddsUpdated": odds.get("updated"),
-           "bookmaker": odds.get("bookmaker"), "bets": bets}
+           "bookmaker": odds.get("bookmaker"), "bets": bets, "cards": cards}
     with open(os.path.join(DATA, "value.json"), "w", encoding="utf-8") as fh:
         json.dump(out, fh, ensure_ascii=False, separators=(",", ":"))
     print(f"Сопоставлено матчей {matched}, нет пары {unmatched}, ставок в файле {len(bets)}, "
