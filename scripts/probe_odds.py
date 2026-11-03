@@ -3,6 +3,8 @@ import json, os, urllib.request, urllib.parse, gzip, collections
 OUT = "probe"; os.makedirs(OUT, exist_ok=True)
 KEY = os.environ.get("ODDSPAPI_KEY", "").strip()
 lines = []
+import atexit
+atexit.register(lambda: open("probe/odds.md", "w").write("\n".join(lines) + "\n"))
 def log(*a):
     s = " ".join(str(x) for x in a); lines.append(s); print(s)
 def op(path, **params):
@@ -13,7 +15,18 @@ def op(path, **params):
         if r.headers.get("Content-Encoding") == "gzip": d = gzip.decompress(d)
         return json.loads(d)
 names = {str(m["marketId"]): (m["marketName"], m["handicap"], m["marketType"]) for m in json.load(open(f"{OUT}/markets_all.json"))}
-o = op("odds-by-tournaments", bookmaker="fonbet", tournamentIds="7,17,8,23,35,34,679")
+import urllib.error
+o = []
+for tids in ("7", "17"):
+    try:
+        part = op("odds-by-tournaments", bookmaker="fonbet", tournamentIds=tids)
+        log(f"турнир {tids}: ответ типа {type(part).__name__}, длина {len(part)}")
+        if isinstance(part, dict): log("  ключи:", list(part)[:10], str(part)[:300])
+        else: o += part
+    except urllib.error.HTTPError as e:
+        log(f"турнир {tids}: HTTP {e.code} {e.read()[:300]!r}")
+    except Exception as e:
+        log(f"турнир {tids}: {type(e).__name__} {e}")
 log("# Фонбет через OddsPapi"); log("матчей:", len(o))
 types = collections.Counter(); per = []
 for f in o:
