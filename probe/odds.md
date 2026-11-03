@@ -1,53 +1,57 @@
-# OddsPapi
-букмекеров: 370
-похожие на Фонбет/Пари: ['1xbet', 'anybet365', 'bet365', 'bet365-nj', 'bet365.bet.ar', 'bet365.bet.br', 'bet365.de', 'bet365.es', 'bet365.fr', 'bet365.gr', 'bet365.it', 'bet365.nl', 'casapariurilor.ro', 'fairpari', 'fonbet', 'marathonbet', 'megapari', 'pinnacle', 'pinnacle+30', 'pinnacle+5']
-  7 | International Clubs | UEFA Champions League | upcoming 9
-  8 | Spain | LaLiga | upcoming 0
-  17 | England | Premier League | upcoming 0
-  21 | England | EFL Cup | upcoming 0
-  23 | Italy | Serie A | upcoming 0
-  34 | France | Ligue 1 | upcoming 0
-  35 | Germany | Bundesliga | upcoming 0
-  44 | Germany | 2. Bundesliga | upcoming 0
-  45 | Austria | Bundesliga | upcoming 0
-  54 | Spain | LaLiga 2 | upcoming 0
-  92 | Brazil | Carioca, Serie A | upcoming 0
-  203 | Russia | Premier League | upcoming 0
-  218 | Ukraine | Premier League | upcoming 0
-  232 | Germany Amateur | Women Bundesliga | upcoming 0
-  266 | Israel | Premier League | upcoming 0
-  325 | Brazil | Brasileiro Serie A | upcoming 2
-  372 | Brazil | Paulista, Serie A1 | upcoming 0
-  374 | Brazil | Baiano, Serie A | upcoming 0
-  376 | Brazil | Catarinense, Serie A | upcoming 0
-  377 | Brazil | Gaucho, Serie A1 | upcoming 0
-  378 | Brazil | Cearense, Serie A | upcoming 0
-  463 | International Clubs | AFC Champions League Elite | upcoming 2
-  629 | Malta | Premier League | upcoming 0
-  634 | Singapore | Premier League | upcoming 0
-  668 | International Clubs | AFC Champions League Two | upcoming 1
-  671 | Armenia | Premier League | upcoming 0
-  673 | Faroe Islands | Premier League | upcoming 0
-  679 | International Clubs | UEFA Europa League | upcoming 0
-  682 | Kazakhstan | Premier League | upcoming 0
-  696 | International Clubs | UEFA Champions League Women | upcoming 0
-  709 | Azerbaijan | Premier League | upcoming 0
-  808 | Egypt | Premier League | upcoming 0
-  809 | Germany Amateur | A-Junioren-Bundesliga N/N-E | upcoming 0
-  810 | Germany Amateur | A-Junioren-Bundesliga West | upcoming 0
-  811 | Germany Amateur | A-Junioren-Bundesliga S/S-W | upcoming 0
-  841 | Algeria | Ligue 1 | upcoming 0
-  846 | Bahrain | Premier League | upcoming 0
-  947 | Hong Kong, China | Premier League | upcoming 0
-  984 | Tunisia | Ligue 1 | upcoming 0
-  1002 | Kuwait | Premier League | upcoming 0
-рынков: 1122
-odds-by-tournaments EPL pinnacle: матчей 10
-  рынков в первом матче: 71
-
-# Фонбет (открытая линия)
-  line01.bkfon-resources.com: URLError <urlopen error [Errno -2] Name or service not known>
-  line02.bkfon-resources.com: URLError <urlopen error [Errno -2] Name or service not known>
-  line51w.bkfon-resources.com: URLError <urlopen error [Errno -2] Name or service not known>
-  line-lb51-w.bkfon-resources.com: URLError <urlopen error [Errno -2] Name or service not known>
-  line55w.bkfon-resources.com: URLError <urlopen error [Errno -2] Name or service not known>
+турнир 7: ответ типа list, длина 18
+турнир 17: HTTP 429 b'{"error":{"message":"You are being rate limited. Please wait before making more requests to this endpoint.","code":"RATE_LIMITED","details":"Please wait 0.52 seconds before making another request to /v4/odds-by-tournaments.","retryAfter":"0.52 seconds","retryMs":524}}'
+# Фонбет через OddsPapi
+матчей: 18
+матчей с линией Фонбета: 18
+  турнир 7 2026-11-03T17:45:00.000Z рынков 104
+  турнир 7 2026-11-03T17:45:00.000Z рынков 113
+  турнир 7 2026-11-03T20:00:00.000Z рынков 109
+  турнир 7 2026-11-03T20:00:00.000Z рынков 106
+  турнир 7 2026-11-03T20:00:00.000Z рынков 108
+  турнир 7 2026-11-03T20:00:00.000Z рынков 111
+  турнир 7 2026-11-03T20:00:00.000Z рынков 105
+  турнир 7 2026-11-03T20:00:00.000Z рынков 103
+  турнир 7 2026-11-03T20:00:00.000Z рынков 105
+  турнир 7 2026-11-04T17:45:00.000Z рынков 100
+  турнир 7 2026-11-04T17:45:00.000Z рынков 104
+  турнир 7 2026-11-04T20:00:00.000Z рынков 104
+  турнир 7 2026-11-04T20:00:00.000Z рынков 100
+  турнир 7 2026-11-04T20:00:00.000Z рынков 108
+  турнир 7 2026-11-04T20:00:00.000Z рынков 106
+  турнир 7 2026-11-04T20:00:00.000Z рынков 103
+  турнир 7 2026-11-04T20:00:00.000Z рынков 104
+  турнир 7 2026-11-04T20:00:00.000Z рынков 107
+типы рынков (сколько линий всего):
+  totals: 497
+  spreads: 249
+  totals-corners: 126
+  teamtotals-team2: 120
+  teamtotals-team1: 113
+  teamtotals-corners-team1: 95
+  teamtotals-corners-team2: 94
+  spreads-corners: 76
+  doublechance: 54
+  1x2: 54
+  1x2-corners: 36
+  toscoreinbh-team1: 18
+  oddeven: 18
+  correctscore: 18
+  winningmargin: 18
+  toscoreinbh-team2: 18
+  highestscoringh-team1: 18
+  halftime-fulltime: 18
+  wineitherh-team1: 18
+  bothteamsscore: 18
+  oddeven-team1: 18
+  wineitherh-team2: 18
+  winfrombehind: 18
+  highestscoringh-team2: 18
+  oddeven-team2: 18
+  highestscoringh: 18
+  toscore-team2: 18
+  toscore-team1: 18
+  wintonil-team2: 17
+  winbothh-team1: 16
+  wintonil-team1: 16
+  winbothh-team2: 16
+  firstgoal: 15
