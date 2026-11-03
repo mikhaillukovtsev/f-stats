@@ -1,0 +1,32 @@
+[
+ {
+  "bookmakerName": "18Bet",
+  "slug": "18bet",
+  "liveOdds": true,
+  "cloneOf": null
+ },
+ {
+  "bookmakerName": "198Bet",
+  "slug": "198bet",
+  "liveOdds": true,
+  "cloneOf": null
+ },
+ {
+  "bookmakerName": "1Red",
+  "slug": "1red",
+  "liveOdds": false,
+  "cloneOf": "n1bet"
+ },
+ {
+  "bookmakerName": "1xBet",
+  "slug": "1xbet",
+  "liveOdds": true,
+  "cloneOf": null
+ },
+ {
+  "bookmakerName": "1xBit",
+  "slug": "1xbit",
+  "liveOdds": true,
+  "cloneOf": "22bet"
+ }
+]
