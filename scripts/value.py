@@ -20,6 +20,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
 NOW = datetime.now(timezone.utc)
 MIN_MATCHES = 5          # меньше матчей в истории — команду не считаем
+MARKET_W = 0.5
 AGREE = 0.12             # насколько модель и факты могут расходиться
 VENUE_W = 0.6            # вес домашних/выездных матчей в средних
 
@@ -269,6 +270,17 @@ def main():
         if not model:
             continue
         team_names = (names[best["h"]]["name"], names[best["a"]]["name"])
+        # Вероятность по рынку без маржи: нормируем внутри одного рынка
+        grp = {}
+        for mtype, period, line, outcome, price in f["odds"]:
+            grp.setdefault((mtype, period, line), []).append(price)
+        def market_p(mtype, period, line, price):
+            ps = grp.get((mtype, period, line), [])
+            target = 2.0 if mtype == "doublechance" else 1.0
+            if mtype == "1x2" and len(ps) < 3 or mtype != "1x2" and mtype != "doublechance" and len(ps) < 2:
+                return None
+            tot = sum(1 / x for x in ps)
+            return (1 / price) * target / tot if tot else None
         for mtype, period, line, outcome, price in f["odds"]:
             s = spec(mtype, period, line, outcome)
             if not s:
@@ -289,6 +301,12 @@ def main():
                 agree = abs(w - fw) <= AGREE
             else:
                 bw, bp, agree = w, pu, None
+            own = bw
+            mk = market_p(mtype, period, line, price)
+            if mk is not None:
+                # Рынок знает про силу соперника, составы и мотивацию, а модель нет:
+                # берём середину между нашей оценкой и рынком.
+                bw = MARKET_W * mk * (1 - bp) + (1 - MARKET_W) * bw
             if bw <= 0.02:
                 continue
             ev = bw * price + bp - 1
@@ -299,7 +317,8 @@ def main():
             bets.append({
                 "mid": best["id"], "c": best["c"], "t": best["t"], "h": best["h"], "a": best["a"],
                 "label": label, "kind": kind, "odds": price,
-                "p": round(bw, 3), "push": round(bp, 3), "pm": round(w, 3),
+                "p": round(bw, 3), "push": round(bp, 3), "pm": round(w, 3), "po": round(own, 3),
+                "pk": round(mk * (1 - bp), 3) if mk is not None else None,
                 "pf": round(fw, 3) if fw is not None else None,
                 "fair": round(fair, 2), "ev": round(ev, 3), "agree": agree,
             })

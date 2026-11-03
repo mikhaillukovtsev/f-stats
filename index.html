@@ -587,7 +587,7 @@ function renderBets(){
       <label class="bf-chk"><input data-bf="agree" type="checkbox" ${BF.agree?"checked":""}> Модель и факты согласны</label>
     </div>
     <div class="seg sm" id="bkind">${KINDS.map(([k,l])=>`<button data-bkind="${k}" class="${BF.kind===k?"on":""}">${l}</button>`).join("")}</div>
-    <p class="cmp-note">Линия Фонбета (= Пари)${upd?" от "+shortDate(upd)+" "+timeStr(upd):""}. Шанс — среднее модели и фактов за 1,5 месяца. Перевес = шанс × кэф − 1. <b class="sus">!</b> — перевес больше 25%: скорее всего модель чего-то не знает (составы, ротация), проверь.</p>
+    <p class="cmp-note">Линия Фонбета (= Пари)${upd?" от "+shortDate(upd)+" "+timeStr(upd):""}. Шанс — наша оценка (модель + факты за 1,5 месяца), усреднённая с рынком: рынок знает про силу соперника и составы, а модель нет. Перевес = шанс × кэф − 1. <b class="sus">!</b> — перевес больше 25%: скорее всего модель чего-то не знает (составы, ротация), проверь.</p>
   </div><div id="betRows"></div>`;
   renderBetRows();
 }
@@ -604,8 +604,8 @@ function renderBetRows(){
     if(dk!==lastDay){html+=`<div class="day">${dayStr(t)}</div>`;lastDay=dk}
     const H=TEAMS[b0.h],A=TEAMS[b0.a],C=COMPS[b0.c];
     html+=`<div class="comp bet-m"><div class="bet-h" data-match="${esc(b0.mid)}"><span class="bet-t">${timeStr(t)}</span><b>${esc(H?H.name:b0.h)} – ${esc(A?A.name:b0.a)}</b><small>${esc(C?C.name:b0.c)}</small></div>
-      <table class="bet-tb"><thead><tr><th>Ставка</th><th>Кэф</th><th>Шанс</th><th class="hide-s">Модель / факты</th><th class="hide-s">Справ.</th><th>Перевес</th></tr></thead><tbody>
-      ${g.sort((x,y)=>y.ev-x.ev).map(b=>`<tr><td>${esc(b.label)}${b.push>0.005?` <small class="muted">возврат ${pct(b.push)}</small>`:""}</td><td><b>${b.odds.toFixed(2)}</b></td><td>${pct(b.p)}</td><td class="hide-s muted">${pct(b.pm)} / ${pct(b.pf)}</td><td class="hide-s">${b.fair.toFixed(2)}</td><td class="${b.ev>=0?"pos":"neg"}">${b.ev>=0?"+":""}${Math.round(b.ev*100)}%${b.ev>0.25?' <b class="sus" title="Подозрительно большой перевес">!</b>':""}</td></tr>`).join("")}
+      <table class="bet-tb"><thead><tr><th>Ставка</th><th>Кэф</th><th>Шанс</th><th class="hide-s">Модель / факты / рынок</th><th class="hide-s">Справ.</th><th>Перевес</th></tr></thead><tbody>
+      ${g.sort((x,y)=>y.ev-x.ev).map(b=>`<tr><td>${esc(b.label)}${b.push>0.005?` <small class="muted">возврат ${pct(b.push)}</small>`:""}</td><td><b>${b.odds.toFixed(2)}</b></td><td>${pct(b.p)}</td><td class="hide-s muted">${pct(b.pm)} / ${pct(b.pf)} / ${pct(b.pk)}</td><td class="hide-s">${b.fair.toFixed(2)}</td><td class="${b.ev>=0?"pos":"neg"}">${b.ev>=0?"+":""}${Math.round(b.ev*100)}%${b.ev>0.25?' <b class="sus" title="Подозрительно большой перевес">!</b>':""}</td></tr>`).join("")}
       </tbody></table></div>`;
   }
   box.innerHTML=html;
