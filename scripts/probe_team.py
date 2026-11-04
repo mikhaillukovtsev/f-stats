@@ -12,3 +12,4 @@ lst=af.get("fixtures") if isinstance(af,dict) else af
 print("n",len(lst or []))
 for f in (lst or [])[:40]:
     print(json.dumps(f,ensure_ascii=False)[:400])
+# v2

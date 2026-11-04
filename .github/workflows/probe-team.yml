@@ -1,5 +1,9 @@
 name: probe team
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/probe_team.py
 jobs:
   p:
     runs-on: ubuntu-latest
