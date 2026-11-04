@@ -312,17 +312,17 @@ def main():
                        "tn": tour.get("name") or ""})
         cache[tid] = {"ts": NOW.isoformat(timespec="seconds"), "fx": fx}
     save_json("team_fx.json", cache)
-    have = {m["id"] for _, m in finished}
+    have = {str(m["id"]) for _, m in finished}
     added = 0
     for tid, rec in cache.items():
         for f in rec["fx"]:
-            if f["id"] in have or parse_time(f["t"]) < cutoff:
+            if str(f["id"]) in have or parse_time(f["t"]) < cutoff:
                 continue
-            have.add(f["id"])
+            have.add(str(f["id"]))
             for tid2, name in (f["h"], f["a"]):
                 teams.setdefault(str(tid2), {"name": name, "short": name})
             finished.append(("oth", {
-                "id": f["id"], "home": {"id": f["h"][0]}, "away": {"id": f["a"][0]},
+                "id": str(f["id"]), "home": {"id": f["h"][0]}, "away": {"id": f["a"][0]},
                 "status": {"utcTime": f["t"], "scoreStr": f["scoreStr"]}, "roundName": f["tn"],
             }))
             added += 1
