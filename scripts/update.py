@@ -48,6 +48,7 @@ EXTRA = {
 # Чужие клубы из еврокубков (PSV, Брюгге, Фенербахче…): их внутренние матчи
 # качаем через страницу команды, без загрузки всей их лиги.
 FOREIGN_FROM = ("cl", "el")
+LEAGUES = ("pl", "ll", "sa", "bl", "l1", "rpl")
 TEAM_REFRESH = timedelta(hours=6)
 TEAM_PER_RUN = 20
 FRIENDLY = re.compile(r"friendl", re.I)
@@ -218,6 +219,7 @@ def main():
 
     teams = {}       # id -> {name, short}
     main_teams = set()
+    league_teams = set()  # команды наших внутренних лиг
     standings = {}   # code -> {team_id: [pos, pts, played]}
     upcoming = {}    # code -> {round, matches}
     finished = []    # (code, fixture)
@@ -237,6 +239,8 @@ def main():
                 teams.setdefault(str(t["id"]), {"name": t["name"], "short": t.get("shortName") or t["name"]})
                 if code in MAIN or code in EXTRA:
                     main_teams.add(str(t["id"]))
+                if code in LEAGUES:
+                    league_teams.add(str(t["id"]))
             st = m["status"]
             if st.get("finished") and not st.get("cancelled") and not st.get("awarded"):
                 if parse_time(st["utcTime"]) >= cutoff:
@@ -278,7 +282,7 @@ def main():
         for blk in (upcoming.get(c) or {}, (upcoming.get(c) or {}).get("next") or {}):
             for m in blk.get("matches") or []:
                 euro_teams.update((m["h"], m["a"]))
-    foreign = euro_teams - main_teams
+    foreign = euro_teams - league_teams
     cache = load_json("team_fx.json", {})
     cache = {k: v for k, v in cache.items() if k in foreign}
     stale = sorted(foreign, key=lambda t: (cache.get(t) or {}).get("ts", ""))
