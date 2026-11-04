@@ -214,7 +214,7 @@ def round_label(code, rnd, round_name):
 
 def main():
     db = load_json("matches.json", {"matches": []})
-    known = {m["id"]: m for m in db["matches"]}
+    known = {str(m["id"]): m for m in db["matches"]}
     cutoff = NOW - timedelta(days=KEEP_DAYS)
 
     teams = {}       # id -> {name, short}
@@ -333,12 +333,12 @@ def main():
     finished = [(c, m) for c, m in finished
                 if str(m["home"]["id"]) in tracked or str(m["away"]["id"]) in tracked]
     print(f"Сыгранных матчей за {KEEP_DAYS} дней: {len(finished)}, в базе уже: "
-          f"{sum(1 for _, m in finished if m['id'] in known and known[m['id']].get('s'))}")
+          f"{sum(1 for _, m in finished if str(m['id']) in known and known[str(m['id'])].get('s'))}")
 
     fetched = failed = 0
     result = []
     for code, m in sorted(finished, key=lambda x: x[1]["status"]["utcTime"], reverse=True):
-        rec = known.get(m["id"])
+        rec = known.get(str(m["id"]))
         need = (rec is None
                 or (rec.get("s") is None and rec.get("tries", 0) < 3)
                 or (rec.get("s") is not None and rec.get("v", 1) < SCHEMA))
