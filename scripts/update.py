@@ -45,6 +45,13 @@ EXTRA = {
     "rpl": (63, "РПЛ"),
 }
 
+# Чужие клубы из еврокубков (PSV, Брюгге, Фенербахче…): их внутренние матчи
+# качаем через страницу команды, без загрузки всей их лиги.
+FOREIGN_FROM = ("cl", "el")
+TEAM_REFRESH = timedelta(hours=6)
+TEAM_PER_RUN = 20
+FRIENDLY = re.compile(r"friendl", re.I)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
 NOW = datetime.now(timezone.utc)
@@ -262,9 +269,65 @@ def main():
                         table[str(row["id"])] = [row.get("idx"), row.get("pts"), row.get("played")]
             standings[code] = table
 
+    # Чужие клубы еврокубков: берём их матчи со страницы команды (кэш в team_fx.json)
+    euro_teams = set()
+    for c, m in finished:
+        if c in FOREIGN_FROM:
+            euro_teams.update((str(m["home"]["id"]), str(m["away"]["id"])))
+    for c in FOREIGN_FROM:
+        for blk in (upcoming.get(c) or {}, (upcoming.get(c) or {}).get("next") or {}):
+            for m in blk.get("matches") or []:
+                euro_teams.update((m["h"], m["a"]))
+    foreign = euro_teams - main_teams
+    cache = load_json("team_fx.json", {})
+    cache = {k: v for k, v in cache.items() if k in foreign}
+    stale = sorted(foreign, key=lambda t: (cache.get(t) or {}).get("ts", ""))
+    refreshed = 0
+    for tid in stale:
+        rec = cache.get(tid)
+        if rec and parse_time(rec["ts"]) > NOW - TEAM_REFRESH:
+            continue
+        if refreshed >= TEAM_PER_RUN:
+            break
+        try:
+            d = get(f"/teams?id={tid}")
+        except Exception as e:  # noqa: BLE001
+            print(f"  команда {tid}: {type(e).__name__}")
+            continue
+        refreshed += 1
+        fx = []
+        for f in (((d.get("fixtures") or {}).get("allFixtures") or {}).get("fixtures") or []):
+            st = f.get("status") or {}
+            tour = f.get("tournament") or {}
+            if FRIENDLY.search(tour.get("name") or "") or st.get("cancelled") or st.get("awarded"):
+                continue
+            if not st.get("utcTime") or not st.get("finished"):
+                continue
+            fx.append({"id": f["id"], "t": st["utcTime"], "scoreStr": st.get("scoreStr", ""),
+                       "h": [f["home"]["id"], f["home"]["name"]], "a": [f["away"]["id"], f["away"]["name"]],
+                       "tn": tour.get("name") or ""})
+        cache[tid] = {"ts": NOW.isoformat(timespec="seconds"), "fx": fx}
+    save_json("team_fx.json", cache)
+    have = {m["id"] for _, m in finished}
+    added = 0
+    for tid, rec in cache.items():
+        for f in rec["fx"]:
+            if f["id"] in have or parse_time(f["t"]) < cutoff:
+                continue
+            have.add(f["id"])
+            for tid2, name in (f["h"], f["a"]):
+                teams.setdefault(str(tid2), {"name": name, "short": name})
+            finished.append(("oth", {
+                "id": f["id"], "home": {"id": f["h"][0]}, "away": {"id": f["a"][0]},
+                "status": {"utcTime": f["t"], "scoreStr": f["scoreStr"]}, "roundName": f["tn"],
+            }))
+            added += 1
+    print(f"Чужих клубов из еврокубков: {len(foreign)}, обновлено страниц: {refreshed}, их матчей добавлено: {added}")
+
     # Сыгранные матчи, где играет хотя бы одна «наша» команда.
+    tracked = main_teams | foreign
     finished = [(c, m) for c, m in finished
-                if str(m["home"]["id"]) in main_teams or str(m["away"]["id"]) in main_teams]
+                if str(m["home"]["id"]) in tracked or str(m["away"]["id"]) in tracked]
     print(f"Сыгранных матчей за {KEEP_DAYS} дней: {len(finished)}, в базе уже: "
           f"{sum(1 for _, m in finished if m['id'] in known and known[m['id']].get('s'))}")
 
@@ -305,7 +368,7 @@ def main():
             used.update((m["h"], m["a"]))
     meta = {
         "updated": NOW.isoformat(timespec="seconds"),
-        "comps": {c: t for c, (_, t) in {**MAIN, **CUPS, **EXTRA}.items()},
+        "comps": {**{c: t for c, (_, t) in {**MAIN, **CUPS, **EXTRA}.items()}, "oth": "Другие турниры"},
         "sourceNames": source_names,
         "order": list(MAIN),
         "upcoming": upcoming,
