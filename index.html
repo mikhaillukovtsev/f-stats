@@ -313,6 +313,7 @@ async function load(){
 let VALUE=null;
 const status=m=>{if(m.done)return"finished";const n=Date.now();if(n>m.ko+150*MIN)return"finished";return(m.live||n>=m.ko)?"live":"scheduled"};
 const upcoming=comp=>{const pick=a=>(a||[]).filter(m=>status(m)!=="finished").sort((x,y)=>x.ko-y.ko);const cur=pick(UPCOMING[comp]);return cur.length?cur:pick(NEXT[comp])};
+const compName=m=>m.comp==="oth"?(m.round||"Другие турниры"):(COMPS[m.comp]||{name:m.comp}).name;
 const standing=(comp,id)=>(STANDINGS[comp]||{})[id];
 
 const PERIODS=[["30","1 месяц"],["45","1,5 месяца"],["90","3 месяца"]];
@@ -505,7 +506,7 @@ const HALF_LBL={m:"",1:" в 1-м тайме",2:" во 2-м тайме"};
 const fv=(cfg,v)=>(cfg.decimals?fmt(v,2):v)+(cfg.unit||"");
 function chartData(cfg,rows){
   const h=tHalf[cfg.key]||"m";
-  return rows.filter(r=>cfg.get(r,h)!=null).map(r=>{const v=cfg.get(r,h);return{t:r.m.ko,v,tip:`<b>${dayStr(r.m.ko)}</b><br>${esc(COMPS[r.m.comp].name)}<br>${r.home?"Дома":"В гостях"}: ${tname(r.oppId)}<br>Счёт ${r.gf}:${r.ga}<br><b>${esc(cfg.title)}${HALF_LBL[h]}: ${fv(cfg,v)}</b>`}});
+  return rows.filter(r=>cfg.get(r,h)!=null).map(r=>{const v=cfg.get(r,h);return{t:r.m.ko,v,tip:`<b>${dayStr(r.m.ko)}</b><br>${esc(compName(r.m))}<br>${r.home?"Дома":"В гостях"}: ${tname(r.oppId)}<br>Счёт ${r.gf}:${r.ga}<br><b>${esc(cfg.title)}${HALF_LBL[h]}: ${fv(cfg,v)}</b>`}});
 }
 function renderTeam(id){
   const t=TEAMS[id];if(!t){main.innerHTML='<p class="muted">Команда не найдена.</p>';return}
@@ -559,7 +560,7 @@ function renderMList(){
     const cell=x=>`<span class="mv${hot?" hot":""}">${f(x)}</span>`;
     const pair=c.oppFirst?`${f(w)} : ${cell(v)}`:`${cell(v)} : ${f(w)}`;
     const sum=v!=null&&w!=null?(c.decimals?fmt(v+w,2):v+w):"–";
-    return`<tr><td>${shortDate(r.m.ko)}</td><td class="muted">${esc(COMPS[r.m.comp].name)}</td><td><a href="#/team/${r.oppId}">${tname(r.oppId)}</a></td><td class="muted">${r.home?"дома":"в гостях"}</td>
+    return`<tr><td>${shortDate(r.m.ko)}</td><td class="muted">${esc(compName(r.m))}</td><td><a href="#/team/${r.oppId}">${tname(r.oppId)}</a></td><td class="muted">${r.home?"дома":"в гостях"}</td>
     <td class="sc num"><a href="#/match/${r.m.id}">${pair}</a>${c.noScore?` <span class="chip ${r.res}" style="width:22px;height:22px;font-size:12px;margin-left:4px">${RL[r.res]}</span>`:""}</td>
     ${c.noSum?"":`<td class="num">${sum}</td>`}
     ${c.noScore?"":`<td class="num muted">${r.gf}:${r.ga} <span class="chip ${r.res}" style="width:22px;height:22px;font-size:12px;margin-left:4px">${RL[r.res]}</span></td>`}</tr>`}).join("")}
