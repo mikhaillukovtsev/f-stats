@@ -141,7 +141,7 @@ def val(d, k, i=0):
     return v[i] if v else None
 
 
-def model_for(T, h, a):
+def model_old(T, h, a):
     ha, aa, hh, av = T.side(h), T.side(a), T.side(h, "H"), T.side(a, "A")
     if len(ha) < MIN_MATCHES or len(aa) < MIN_MATCHES:
         return None
@@ -176,6 +176,139 @@ def model_for(T, h, a):
         "Y": joint(*lam["y"], disp=1.3, n=15) if lam["y"] else None,
         "ly": lam["y"],
         "lam": {"g": [round(g[0], 2), round(g[1], 2)], "c": [round(x, 2) for x in lam["c"]] if lam["c"] else None},
+    }
+
+
+# ---------- модель силы команд (атака/оборона с поправкой на соперника) ----------
+
+HALF_LIFE = 45      # дней: матч полуторамесячной давности весит вдвое меньше свежего
+PRIOR_K = 4         # «виртуальных» средних матчей, тянущих рейтинг к 1 при малой выборке
+DISP = {"g": 1.0, "c": 1.4, "y": 1.3}
+REF_K = 10          # сколько матчей судьи нужно, чтобы доверять его средним наполовину
+
+
+def goal_val(side):
+    g, xg = val(side, "g"), val(side, "xg")
+    if g is None:
+        return None
+    return (g + xg) / 2 if xg is not None else g
+
+
+# Команды вне наших лиг и еврокубков (соперники по кубкам, внутренним лигам PSV, Ференцвароша…)
+# встречаются 1–2 раза, по ним силу не оценить. Им ставим фиксированный уровень лиги,
+# иначе Ференцварош, обыгрывающий слабых венгров, выглядел бы как Бавария.
+LEVEL = {
+    "Liga Portugal": 0.85, "Eredivisie": 0.85, "Belgian Pro League": 0.8, "Super Lig": 0.8,
+    "Bundesliga": 0.75, "Super League": 0.75, "Premiership": 0.72, "1. Liga": 0.72, "Eliteserien": 0.72,
+    "Premier League": 0.7, "Ekstraklasa": 0.68, "HNL": 0.68, "NB I": 0.65, "Ligat ha'Al": 0.65,
+    "Cyprus League": 0.63, "Prva Liga": 0.62, "First Professional League": 0.62,
+    "Europa League Qualification": 0.62, "Liga Portugal 2": 0.6,
+}
+CUP_LEVEL = 0.6       # низшие дивизионы в кубках
+MINOR_LEVEL = 0.65
+
+
+def minor_levels(matches, core):
+    import collections
+    grp = collections.defaultdict(collections.Counter)
+    for m in matches:
+        for t in (m["h"], m["a"]):
+            if t not in core:
+                grp[t][m["r"] if m["c"] == "oth" else "#cup"] += 1
+    out = {}
+    for t, cnt in grp.items():
+        name = cnt.most_common(1)[0][0]
+        if name == "#cup" or "Cup" in name:
+            out[t] = CUP_LEVEL
+        else:
+            out[t] = LEVEL.get(name, MINOR_LEVEL)
+    return out
+
+
+def fit_ratings(matches, getter, fixed=None, iters=60):
+    rows = []
+    for m in matches:
+        s = m.get("s")
+        if not s:
+            continue
+        xh, xa = getter(s["h"]), getter(s["a"])
+        if xh is None or xa is None:
+            continue
+        age = max((NOW - ts(m["t"])).total_seconds() / 86400, 0)
+        rows.append((m["h"], m["a"], xh, xa, 0.5 ** (age / HALF_LIFE)))
+    if not rows:
+        return None
+    sw = sum(r[4] for r in rows)
+    mu_h = sum(r[2] * r[4] for r in rows) / sw
+    mu_a = sum(r[3] * r[4] for r in rows) / sw
+    teams = {r[0] for r in rows} | {r[1] for r in rows}
+    fixed = fixed or {}
+    att = {t: fixed.get(t, 1.0) for t in teams}
+    dfn = {t: 1 / fixed.get(t, 1.0) for t in teams}
+    free = [t for t in teams if t not in fixed]
+    by = {t: [] for t in teams}
+    for h, a, xh, xa, w in rows:
+        by[h].append((a, xh, xa, w, True))
+        by[a].append((h, xa, xh, w, False))
+    base = (mu_h + mu_a) / 2
+    for _ in range(iters):
+        for t in free:
+            num = den = 0.0
+            for o, xf, xg_, w, home in by[t]:
+                num += w * xf
+                den += w * (mu_h if home else mu_a) * dfn[o]
+            att[t] = (num + PRIOR_K * base) / (den + PRIOR_K * base)
+        for t in free:
+            num = den = 0.0
+            for o, xf, xa_, w, home in by[t]:
+                num += w * xa_
+                den += w * (mu_a if home else mu_h) * att[o]
+            dfn[t] = (num + PRIOR_K * base) / (den + PRIOR_K * base)
+    n = {t: len(by[t]) for t in teams}
+    return {"mu": (mu_h, mu_a), "att": att, "def": dfn, "n": n}
+
+
+def ref_factor(ref):
+    """Множитель к ожидаемым ЖК по судье (его средние против средних его лиги)."""
+    if not ref or not ref.get("yc") or not ref.get("avg"):
+        return 1.0
+    n = ref.get("n") or 0
+    return (n * ref["yc"] + REF_K * ref["avg"]) / ((n + REF_K) * ref["avg"])
+
+
+def model_for(T, h, a, R=None, ref=None):
+    """Новая модель: λ = база × атака × оборона соперника (рейтинги с затуханием по времени)."""
+    old = model_old(T, h, a)
+    if not old or not R:
+        return old
+    lam = {}
+    for k in ("g", "c", "y"):
+        r = R.get(k)
+        if not r or h not in r["att"] or a not in r["att"]:
+            lam[k] = None
+            continue
+        lam[k] = (r["mu"][0] * r["att"][h] * r["def"][a], r["mu"][1] * r["att"][a] * r["def"][h])
+    if not lam["g"]:
+        return old
+    rf = ref_factor(ref)
+    if lam["y"]:
+        lam["y"] = (lam["y"][0] * rf, lam["y"][1] * rf)
+    ha, aa = old["rows"]
+    h1 = tot = 0
+    for rws in (ha, aa):
+        for o, p in rws:
+            if o["g"][1] is not None and p["g"][1] is not None:
+                h1 += o["g"][1] + p["g"][1]; tot += o["g"][0] + p["g"][0]
+    share = min(max(h1 / tot, 0.35), 0.55) if tot else 0.45
+    g = lam["g"]
+    return {
+        "rows": old["rows"], "old": old, "ref": ref, "rf": round(rf, 2),
+        "G": joint(*g), "G1": joint(g[0] * share, g[1] * share), "G2": joint(g[0] * (1 - share), g[1] * (1 - share)),
+        "C": joint(*lam["c"], disp=DISP["c"]) if lam["c"] else old["C"],
+        "Y": joint(*lam["y"], disp=DISP["y"], n=15) if lam["y"] else old["Y"],
+        "ly": lam["y"] or old["ly"],
+        "lam": {"g": [round(x, 2) for x in g], "c": [round(x, 2) for x in lam["c"]] if lam["c"] else None,
+                "y": [round(x, 2) for x in lam["y"]] if lam["y"] else None},
     }
 
 
@@ -337,6 +470,14 @@ def main():
         return 0
     odds = odds or {"fixtures": []}
     T = Teams(db["matches"])
+    core = set()
+    for tbl in (meta.get("standings") or {}).values():
+        core |= set(tbl)
+    lv = minor_levels(db["matches"], core)
+    R = {"g": fit_ratings(db["matches"], goal_val, lv),
+         "c": fit_ratings(db["matches"], lambda sd: val(sd, "c"), lv),
+         "y": fit_ratings(db["matches"], lambda sd: val(sd, "y"), {t: 1.0 for t in lv})}
+    refs = {k: v.get("ref") for k, v in (load("refs.json", {}) or {}).items()}
     names = meta["teams"]
     ours = []
     for code, u in meta["upcoming"].items():
@@ -363,6 +504,7 @@ def main():
         used_m.add(mid)
 
     bets = []
+    log_rows = []
     matched = unmatched = 0
     for f in odds["fixtures"]:
         t = ts(f["t"])
@@ -374,9 +516,10 @@ def main():
             print(f"  не сопоставлен: {f['c']} {f['t']} {f['n1']} – {f['n2']}")
             continue
         matched += 1
-        model = model_for(T, best["h"], best["a"])
+        model = model_for(T, best["h"], best["a"], R, refs.get(str(best["id"])))
         if not model:
             continue
+        old = model.get("old")
         team_names = (names[best["h"]]["name"], names[best["a"]]["name"])
         # Вероятность по рынку без маржи: нормируем внутри одного рынка
         grp = {}
@@ -399,6 +542,8 @@ def main():
                 continue
             w = sum(p * fn(i, j)[0] for i, j, p in D)
             pu = sum(p * fn(i, j)[1] for i, j, p in D)
+            Do = old.get(dist) if old else None
+            wo = sum(p * fn(i, j)[0] for i, j, p in Do) if Do else None
             fw = fp = None
             if fspec:
                 fr = fact(model, fspec)
@@ -419,9 +564,18 @@ def main():
                 continue
             ev = bw * price + bp - 1
             fair = (1 - bp) / bw
+            label = label.replace("@0", team_names[0]).replace("@1", team_names[1])
+            if 1.3 <= price <= 4:
+                log_rows.append({"k": "|".join(map(str, [best["id"], mtype, period, line, outcome])),
+                                 "mid": best["id"], "c": best["c"], "t": best["t"], "h": best["h"], "a": best["a"],
+                                 "m": [mtype, period, line, outcome], "label": label, "kind": kind,
+                                 "odds": price, "p": round(bw, 4), "push": round(bp, 4), "pm": round(w, 4),
+                                 "pmo": round(wo, 4) if wo is not None else None,
+                                 "pf": round(fw, 4) if fw is not None else None,
+                                 "pk": round(mk * (1 - bp), 4) if mk is not None else None,
+                                 "rf": model.get("rf")})
             if ev < -0.08 or not (1.2 <= price <= 5):
                 continue
-            label = label.replace("@0", team_names[0]).replace("@1", team_names[1])
             bets.append({
                 "mid": best["id"], "c": best["c"], "t": best["t"], "h": best["h"], "a": best["a"],
                 "label": label, "kind": kind, "odds": price, "m": [mtype, period, line, outcome],
@@ -438,7 +592,7 @@ def main():
         t = ts(m["t"])
         if not (NOW < t < NOW + timedelta(days=7)) or m["c"] == "rpl":
             continue
-        model = model_for(T, m["h"], m["a"])
+        model = model_for(T, m["h"], m["a"], R, refs.get(str(m["id"])))
         if not model:
             continue
         tn = (names[m["h"]]["name"], names[m["a"]]["name"])
@@ -446,9 +600,13 @@ def main():
         for x in lines:
             x["label"] = x["label"].replace("@0", tn[0]).replace("@1", tn[1])
         if lines:
+            rf = model.get("ref") or {}
             cards.append({"mid": m["id"], "c": m["c"], "t": m["t"], "h": m["h"], "a": m["a"],
-                          "ly": [round(v, 2) for v in model["ly"]], "lines": lines})
+                          "ly": [round(v, 2) for v in model["ly"]], "lines": lines,
+                          "ref": {"name": rf.get("name"), "yc": rf.get("yc"), "avg": rf.get("avg"), "n": rf.get("n")} if rf else None})
     cards.sort(key=lambda x: x["t"])
+    import tracklog
+    tracklog.update(log_rows, db["matches"], NOW, spec)
     out = {"updated": NOW.isoformat(timespec="seconds"), "oddsUpdated": odds.get("updated"),
            "bookmaker": odds.get("bookmaker"), "bets": bets, "cards": cards}
     with open(os.path.join(DATA, "value.json"), "w", encoding="utf-8") as fh:

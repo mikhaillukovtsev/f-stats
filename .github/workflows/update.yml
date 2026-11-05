@@ -9,6 +9,7 @@ on:
       - scripts/update.py
       - scripts/value.py
       - scripts/odds.py
+      - scripts/tracklog.py
       - .github/workflows/update.yml
 
 permissions:

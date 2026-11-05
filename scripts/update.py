@@ -172,6 +172,20 @@ def parse_details(d):
 
 # ---------- определение текущего тура ----------
 
+def parse_referee(d):
+    r = (((d.get("content") or {}).get("matchFacts") or {}).get("infoBox") or {}).get("Referee") or {}
+    if not r.get("text"):
+        return None
+    out = {"name": r["text"], "id": r.get("id"), "country": r.get("country")}
+    for st in r.get("stats") or []:
+        if st.get("type") == "matches":
+            out["n"] = st.get("value")
+        elif st.get("type") == "yellowCards":
+            out["yc"] = st.get("value")
+            out["avg"] = st.get("average")
+    return out
+
+
 def rounds_ahead(matches):
     """Тур, который сейчас идёт или будет следующим, и его оставшиеся матчи.
 
@@ -365,6 +379,33 @@ def main():
         if rec:
             result.append(rec)
     print(f"Скачано подробностей: {fetched}, ошибок: {failed}")
+
+    # Судьи ближайших матчей (для модели карточек): FotMob отдаёт судью и его средние ЖК
+    refs = load_json("refs.json", {})
+    refs = {k: v for k, v in refs.items() if parse_time(v["t"]) > NOW - timedelta(days=2)}
+    soon = []
+    for u in upcoming.values():
+        for blk in (u, u.get("next") or {}):
+            for m in blk.get("matches") or []:
+                t = parse_time(m["t"])
+                if NOW - timedelta(hours=2) < t < NOW + timedelta(hours=48):
+                    soon.append(m)
+    got = 0
+    for m in sorted(soon, key=lambda m: m["t"]):
+        r = refs.get(str(m["id"]))
+        if r and (r.get("ref") or parse_time(r["ts"]) > NOW - timedelta(hours=3)):
+            continue
+        if got >= 60:
+            break
+        try:
+            ref = parse_referee(get(f"/matchDetails?matchId={m['id']}"))
+        except Exception as e:  # noqa: BLE001
+            print(f"  судья {m['id']}: {type(e).__name__}")
+            continue
+        got += 1
+        refs[str(m["id"])] = {"t": m["t"], "ts": NOW.isoformat(timespec="seconds"), "ref": ref}
+    save_json("refs.json", refs)
+    print(f"Судьи: проверено {got}, известно {sum(1 for v in refs.values() if v.get('ref'))} из {len(refs)}")
 
     used = {r["h"] for r in result} | {r["a"] for r in result} | main_teams
     for u in upcoming.values():

@@ -636,14 +636,14 @@ function renderBetRows(){
 function renderCards(box,n){
   const lo=BF.lo-0.25,hi=BF.hi;
   const ms=(VALUE.cards||[]).filter(c=>Date.parse(c.t)>n).map(c=>({...c,lines:c.lines.filter(l=>l.from>=lo&&l.from<=hi&&(!BF.agree||l.agree!==false))})).filter(c=>c.lines.length);
-  let html=`<div class="panel cards-note">Справедливые кэфы на ЖК для всех матчей, даже где Фонбет ещё не выставил линию на карточки (обычно она появляется за 1–2 дня). Здесь только наша оценка (модель + факты, без поправки на рынок). Открой матч в Фонбете: если кэф <b>не ниже «Брать от»</b> — ставка с перевесом от 5%. Показаны линии, где «Брать от» от ${fmt(lo,2)} до ${fmt(hi,2)}. Судью модель не знает — проверь его средние сам.</div>`;
+  let html=`<div class="panel cards-note">Справедливые кэфы на ЖК для всех матчей, даже где Фонбет ещё не выставил линию на карточки (обычно она появляется за 1–2 дня). Здесь только наша оценка (модель + факты, без поправки на рынок). Открой матч в Фонбете: если кэф <b>не ниже «Брать от»</b> — ставка с перевесом от 5%. Показаны линии, где «Брать от» от ${fmt(lo,2)} до ${fmt(hi,2)}. Судья учитывается, когда FotMob его объявил (обычно за 1–2 дня): у «карточного» судьи ожидание ЖК выше.</div>`;
   if(!ms.length){box.innerHTML=html+'<div class="fav-empty"><p>Под фильтр ничего не подошло.</p></div>';return}
   let lastDay="";
   for(const c of ms){
     const t=Date.parse(c.t),dk=dayKey(t);
     if(dk!==lastDay){html+=`<div class="day">${dayStr(t)}</div>`;lastDay=dk}
     const H=TEAMS[c.h],A=TEAMS[c.a],C=COMPS[c.c];
-    html+=`<div class="comp bet-m"><div class="bet-h" data-match="${esc(c.mid)}"><span class="bet-t">${timeStr(t)}</span><b>${esc(H?H.name:c.h)} – ${esc(A?A.name:c.a)}</b><small>${esc(C?C.name:c.c)} · ожид. ЖК ${fmt(c.ly[0],1)} + ${fmt(c.ly[1],1)}</small></div>
+    html+=`<div class="comp bet-m"><div class="bet-h" data-match="${esc(c.mid)}"><span class="bet-t">${timeStr(t)}</span><b>${esc(H?H.name:c.h)} – ${esc(A?A.name:c.a)}</b><small>${esc(C?C.name:c.c)} · ожид. ЖК ${fmt(c.ly[0],1)} + ${fmt(c.ly[1],1)}${c.ref&&c.ref.name?` · судья ${esc(c.ref.name)}${c.ref.yc?` (${fmt(c.ref.yc,1)} ЖК/матч при среднем ${fmt(c.ref.avg,1)})`:""}`:""}</small></div>
       <table class="bet-tb"><thead><tr><th>Ставка</th><th>Брать от</th><th>Шанс</th><th class="hide-s">Модель / факты</th><th class="hide-s">Справ.</th></tr></thead><tbody>
       ${c.lines.map(l=>`<tr><td>${esc(l.label)}</td><td><b>${l.from.toFixed(2)}</b></td><td>${pct(l.p)}</td><td class="hide-s muted">${pct(l.pm)} / ${pct(l.pf)}</td><td class="hide-s">${l.fair.toFixed(2)}</td></tr>`).join("")}
       </tbody></table></div>`;
