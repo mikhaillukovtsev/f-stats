@@ -8,6 +8,7 @@ on:
     paths:
       - scripts/update.py
       - scripts/value.py
+      - scripts/odds.py
       - .github/workflows/update.yml
 
 permissions:
@@ -30,6 +31,8 @@ jobs:
           python-version: "3.12"
       - name: Загрузить данные
         run: python scripts/update.py
+      - name: Линия Фонбета
+        run: python scripts/odds.py || true
       - name: Пересчитать перевесы
         run: python scripts/value.py || true
       - name: Сохранить изменения

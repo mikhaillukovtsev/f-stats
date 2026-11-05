@@ -573,7 +573,7 @@ function applyChart(key,keep){
   o.ch.line=tLine[lk];o.ch.setData(data,keep);
 }
 /* ---------- bets ---------- */
-const KINDS=[["all","Все"],["goals","Тоталы"],["halves","Таймы"],["team","Инд. тоталы"],["result","Исход"],["corners","Угловые"],["cards","ЖК (без линии)"]];
+const KINDS=[["all","Все"],["goals","Тоталы"],["halves","Таймы"],["team","Инд. тоталы"],["result","Исход"],["corners","Угловые"],["cards","ЖК"],["cardsnl","ЖК без линии"]];
 let BF={lo:1.7,hi:2.1,ev:5,agree:true,kind:"all"};
 try{BF={...BF,...JSON.parse(localStorage.getItem("bf")||"{}")}}catch(e){}
 function saveBF(){try{localStorage.setItem("bf",JSON.stringify(BF))}catch(e){}}
@@ -596,7 +596,7 @@ function renderBets(){
 function renderBetRows(){
   const box=document.getElementById("betRows");if(!box)return;
   const n=Date.now();
-  if(BF.kind==="cards")return renderCards(box,n);
+  if(BF.kind==="cardsnl")return renderCards(box,n);
   const rows=VALUE.bets.filter(b=>Date.parse(b.t)>n&&b.odds>=BF.lo&&b.odds<=BF.hi&&b.ev*100>=BF.ev&&(!BF.agree||b.agree!==false)&&(BF.kind==="all"||b.kind===BF.kind));
   if(!rows.length){box.innerHTML='<div class="fav-empty"><p>Под фильтр ничего не подошло. Ослабь перевес или расширь коэффициенты.</p></div>';return}
   const byM=new Map();for(const b of rows){if(!byM.has(b.mid))byM.set(b.mid,[]);byM.get(b.mid).push(b)}
@@ -616,7 +616,7 @@ function renderBetRows(){
 function renderCards(box,n){
   const lo=BF.lo-0.25,hi=BF.hi;
   const ms=(VALUE.cards||[]).filter(c=>Date.parse(c.t)>n).map(c=>({...c,lines:c.lines.filter(l=>l.from>=lo&&l.from<=hi&&(!BF.agree||l.agree!==false))})).filter(c=>c.lines.length);
-  let html=`<div class="panel cards-note">Фонбет не отдаёт линию на жёлтые, поэтому здесь только наша оценка (модель + факты, без поправки на рынок). Открой матч в Фонбете: если кэф <b>не ниже «Брать от»</b> — ставка с перевесом от 5%. Показаны линии, где «Брать от» от ${fmt(lo,2)} до ${fmt(hi,2)}. Судью модель не знает — проверь его средние сам.</div>`;
+  let html=`<div class="panel cards-note">Справедливые кэфы на ЖК для всех матчей, даже где Фонбет ещё не выставил линию на карточки (обычно она появляется за 1–2 дня). Здесь только наша оценка (модель + факты, без поправки на рынок). Открой матч в Фонбете: если кэф <b>не ниже «Брать от»</b> — ставка с перевесом от 5%. Показаны линии, где «Брать от» от ${fmt(lo,2)} до ${fmt(hi,2)}. Судью модель не знает — проверь его средние сам.</div>`;
   if(!ms.length){box.innerHTML=html+'<div class="fav-empty"><p>Под фильтр ничего не подошло.</p></div>';return}
   let lastDay="";
   for(const c of ms){

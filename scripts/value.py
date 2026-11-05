@@ -43,6 +43,42 @@ STOP = {"fc", "cf", "ac", "as", "sc", "afc", "ssc", "us", "rc", "cd", "ud", "sd"
         "tsg", "fsv", "sv", "bc", "club", "de", "di", "calcio", "1", "04", "05", "1899", "1909", "1846", "the"}
 
 
+TR = dict(zip("абвгдеёжзийклмнопрстуфхцчшщъыьэюя",
+              ["a", "b", "v", "g", "d", "e", "e", "zh", "z", "i", "y", "k", "l", "m", "n", "o", "p", "r", "s", "t", "u",
+               "f", "kh", "ts", "ch", "sh", "sch", "", "y", "", "e", "yu", "ya"]))
+# Русские названия, которые транслитом не угадать
+ALIAS = {
+    "бавария": "bayern munchen", "псж": "paris saint germain", "байер": "bayer leverkusen",
+    "боруссия д": "borussia dortmund", "боруссия м": "borussia monchengladbach", "кельн": "koln",
+    "айнтрахт ф": "eintracht frankfurt", "гамбург": "hamburger sv", "лион": "lyon", "марсель": "marseille",
+    "ницца": "nice", "ренн": "rennes", "нант": "nantes", "тулуза": "toulouse", "осер": "auxerre",
+    "анже": "angers", "гавр": "le havre", "лорьян": "lorient", "ланс": "lens", "лилль": "lille",
+    "интер": "inter", "ювентус": "juventus", "наполи": "napoli", "рома": "roma", "лацио": "lazio",
+    "атлетико": "atletico madrid", "атлетик": "athletic club", "реал": "real madrid", "бетис": "real betis",
+    "сельта": "celta vigo", "сосьедад": "real sociedad", "вильярреал": "villarreal", "севилья": "sevilla",
+    "валенсия": "valencia", "хетафе": "getafe", "жирона": "girona", "эспаньол": "espanyol",
+    "тоттенхэм": "tottenham hotspur", "вулверхэмптон": "wolverhampton wanderers", "вест хэм": "west ham united",
+    "ньюкасл": "newcastle united", "брайтон": "brighton hove albion", "лидс": "leeds united",
+    "фенербахче": "fenerbahce", "галатасарай": "galatasaray", "бешикташ": "besiktas", "псв": "psv eindhoven",
+    "брюгге": "club brugge", "спортинг": "sporting cp", "бенфика": "benfica", "порту": "porto",
+    "ференцварош": "ferencvaros", "црвена звезда": "crvena zvezda", "янг бойз": "young boys",
+    "штутгарт": "vfb stuttgart", "фрайбург": "freiburg", "хоффенхайм": "hoffenheim", "майнц": "mainz",
+    "унион берлин": "union berlin", "вердер": "werder bremen", "санкт паули": "st pauli",
+}
+
+
+def ru2lat(name):
+    s = name.lower().replace("ё", "е").replace("-", " ").replace(".", "")
+    s = re.sub(r"\s+", " ", s).strip()
+    if s in ALIAS:
+        return ALIAS[s]
+    for k, v in ALIAS.items():
+        if s.startswith(k + " ") or s == k:
+            s = v + s[len(k):]
+            break
+    return "".join(TR.get(ch, ch) for ch in s)
+
+
 def norm(name):
     s = unicodedata.normalize("NFD", name).encode("ascii", "ignore").decode().lower()
     s = re.sub(r"[^a-z0-9 ]+", " ", s)
@@ -170,13 +206,30 @@ def spec(mtype, period, line, outcome):
         return (f"{pl}Голы {side} {tl}", "goals" if per == 0 else "halves", dist,
                 lambda i, j: payout_line(i + j, line, over),
                 ("both", lambda o, p: payout_line(o["g"][per] + p["g"][per], line, over) if o["g"][per] is not None and p["g"][per] is not None else None))
-    if per != 0:
-        return None
     if mtype in ("teamtotals-team1", "teamtotals-team2") and outcome in ("Over", "Under"):
         t = 0 if mtype.endswith("1") else 1
-        return (f"@{t} ИТ{'Б' if over else 'М'} {tl}", "team", "G",
+        return (f"{pl}@{t} ИТ{'Б' if over else 'М'} {tl}", "team" if per == 0 else "halves", dist,
                 lambda i, j: payout_line((i, j)[t], line, over),
-                ("team", t, lambda o, p: payout_line(o["g"][0], line, over), lambda o, p: payout_line(p["g"][0], line, over)))
+                ("team", t, lambda o, p: payout_line(o["g"][per], line, over) if o["g"][per] is not None else None,
+                 lambda o, p: payout_line(p["g"][per], line, over) if p["g"][per] is not None else None))
+    if mtype == "bothteamsscore" and outcome in ("Yes", "No") and per != 0:
+        yes = outcome == "Yes"
+        return (f"{pl}Обе забьют: {'да' if yes else 'нет'}", "halves", dist,
+                lambda i, j: ((1.0, 0.0) if (i > 0 and j > 0) == yes else (0.0, 0.0)),
+                ("both", lambda o, p: ((1.0, 0.0) if (o["g"][per] > 0 and p["g"][per] > 0) == yes else (0.0, 0.0))
+                 if o["g"][per] is not None and p["g"][per] is not None else None))
+    if mtype == "totals-cards" and outcome in ("Over", "Under") and per == 0:
+        return (f"ЖК {side} {tl}", "cards", "Y",
+                lambda i, j: payout_line(i + j, line, over),
+                ("both", lambda o, p: payout_line(o["y"][0] + p["y"][0], line, over) if val(o, "y") is not None and val(p, "y") is not None else None))
+    if mtype in ("teamtotals-cards-team1", "teamtotals-cards-team2") and outcome in ("Over", "Under") and per == 0:
+        t = 0 if mtype.endswith("1") else 1
+        return (f"@{t} ЖК ИТ{'Б' if over else 'М'} {tl}", "cards", "Y",
+                lambda i, j: payout_line((i, j)[t], line, over),
+                ("team", t, lambda o, p: payout_line(o["y"][0], line, over) if val(o, "y") is not None else None,
+                 lambda o, p: payout_line(p["y"][0], line, over) if val(p, "y") is not None else None))
+    if per != 0 and mtype not in ("1x2", "doublechance"):
+        return None
     if mtype in ("toscore-team1", "toscore-team2") and outcome in ("Yes", "No"):
         t = 0 if mtype.endswith("1") else 1
         yes = outcome == "Yes"
@@ -191,11 +244,11 @@ def spec(mtype, period, line, outcome):
                 ("both", lambda o, p: (1.0, 0.0) if (o["g"][0] > 0 and p["g"][0] > 0) == yes else (0.0, 0.0)))
     if mtype == "1x2" and outcome in ("1", "X", "2"):
         f = {"1": lambda i, j: i > j, "X": lambda i, j: i == j, "2": lambda i, j: j > i}[outcome]
-        return ({"1": "П1", "X": "Ничья", "2": "П2"}[outcome], "result", "G",
+        return (pl + {"1": "П1", "X": "Ничья", "2": "П2"}[outcome], "result" if per == 0 else "halves", dist,
                 lambda i, j: (1.0, 0.0) if f(i, j) else (0.0, 0.0), None)
     if mtype == "doublechance" and outcome in ("1X", "12", "2X", "X2"):
         f = {"1X": lambda i, j: i >= j, "12": lambda i, j: i != j, "2X": lambda i, j: j >= i, "X2": lambda i, j: j >= i}[outcome]
-        return ({"1X": "1X", "12": "12", "2X": "X2", "X2": "X2"}[outcome], "result", "G",
+        return (pl + {"1X": "1X", "12": "12", "2X": "X2", "X2": "X2"}[outcome], "result" if per == 0 else "halves", dist,
                 lambda i, j: (1.0, 0.0) if f(i, j) else (0.0, 0.0), None)
     if mtype == "drawnobet" and outcome in ("1", "2"):
         return ({"1": "Ф1(0)", "2": "Ф2(0)"}[outcome], "result", "G",
@@ -291,19 +344,32 @@ def main():
             for m in blk.get("matches") or []:
                 ours.append({**m, "c": code, "round": blk.get("round", "")})
 
+    # Сопоставление матчей: внутри турнира и окна ±3 ч, жадно по сходству названий
+    # (русские названия Фонбета переводятся транслитом + словарём).
+    cand = []
+    for f in odds["fixtures"]:
+        t = ts(f["t"])
+        n1, n2 = ru2lat(f["n1"]), ru2lat(f["n2"])
+        slot = [m for m in ours if m["c"] == f["c"] and abs((ts(m["t"]) - t).total_seconds()) <= 3 * 3600]
+        for m in slot:
+            sc = sim(names[m["h"]]["name"], n1) + sim(names[m["a"]]["name"], n2)
+            cand.append((sc + (0.3 if len(slot) == 1 else 0), id(f), m["id"], m))
+    cand.sort(key=lambda x: -x[0])
+    pairing, used_m = {}, set()
+    for sc, fid, mid, m in cand:
+        if fid in pairing or mid in used_m or sc < 0.9:
+            continue
+        pairing[fid] = m
+        used_m.add(mid)
+
     bets = []
     matched = unmatched = 0
     for f in odds["fixtures"]:
         t = ts(f["t"])
         if t < NOW - timedelta(minutes=5):
             continue
-        cands = [m for m in ours if m["c"] == f["c"] and abs((ts(m["t"]) - t).total_seconds()) < 4 * 3600]
-        best, score = None, 0
-        for m in cands:
-            s = sim(names[m["h"]]["name"], f["n1"]) + sim(names[m["a"]]["name"], f["n2"])
-            if s > score:
-                best, score = m, s
-        if not best or score < 1.1:
+        best = pairing.get(id(f))
+        if not best:
             unmatched += 1
             print(f"  не сопоставлен: {f['c']} {f['t']} {f['n1']} – {f['n2']}")
             continue
@@ -319,7 +385,7 @@ def main():
         def market_p(mtype, period, line, price):
             ps = grp.get((mtype, period, line), [])
             target = 2.0 if mtype == "doublechance" else 1.0
-            if mtype == "1x2" and len(ps) < 3 or mtype != "1x2" and mtype != "doublechance" and len(ps) < 2:
+            if mtype.startswith("1x2") and len(ps) < 3 or mtype != "1x2" and mtype != "doublechance" and len(ps) < 2:
                 return None
             tot = sum(1 / x for x in ps)
             return (1 / price) * target / tot if tot else None
