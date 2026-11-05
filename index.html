@@ -133,6 +133,25 @@ h3{font-family:var(--display);font-weight:600;font-size:20px;margin:0;line-heigh
 .bf-chk{display:flex;align-items:center;gap:6px;cursor:pointer}
 .bets-f .seg{flex-wrap:wrap}
 .bet-m{padding:0}
+.tk{width:34px;padding-right:0!important}
+.bet-tb .tk+td,.bet-tb .tk+th{text-align:left}
+.trk{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line);background:transparent;color:var(--muted);font:600 15px/1 inherit;cursor:pointer;display:grid;place-items:center}
+.trk:hover{border-color:#1F8A4C;color:#1F8A4C}
+.trk.on{background:#1F8A4C;border-color:#1F8A4C;color:#fff}
+.trk:disabled{opacity:.6;cursor:default}
+.trk-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px;margin-bottom:10px}
+.trk-sum div{display:flex;flex-direction:column;gap:2px}.trk-sum b{font-size:22px;font-variant-numeric:tabular-nums}.trk-sum span{font-size:12px;color:var(--muted)}
+.pos{color:#1F8A4C}.negr{color:#C0392B}
+.bet-tb .negr{color:#C0392B;font-weight:600}
+.trk-agg{padding:0;margin-top:12px}.trk-agg h3{margin:0;padding:12px 14px 4px;font-size:15px}
+.trk-list tr[data-match]{cursor:pointer}.trk-list tr[data-match]:hover{background:var(--surface-2)}
+.out.win,.out.halfwin{color:#1F8A4C;font-weight:600}.out.lose,.out.halflose{color:#C0392B;font-weight:600}.out.push,.out.wait,.out.live,.out.nodata{color:var(--muted)}
+.out small{font-weight:400;color:var(--muted)}
+.trk-io{margin-top:14px}.trk-io summary{cursor:pointer;font-weight:600}
+.trk-io textarea{width:100%;box-sizing:border-box;font:12px ui-monospace,monospace;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);color:var(--ink)}
+.trk-io textarea.bad{border-color:#C0392B}
+.trk-btns{display:flex;gap:8px;margin-top:8px}.trk-btns button{padding:6px 14px;border-radius:6px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);cursor:pointer;font:inherit}
+
 .cards-note{font-size:14px;color:var(--muted);line-height:1.45}
 .bet-h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--line)}
 .bet-h:hover{background:var(--surface-2)}
@@ -250,6 +269,7 @@ h3{font-family:var(--display);font-weight:600;font-size:20px;margin:0;line-heigh
     <nav class="tabs">
       <a href="#/" data-tab="list">Турниры</a>
       <a href="#/bets" data-tab="bets">Ставки</a>
+      <a href="#/track" data-tab="track">Учёт</a>
       <a href="#/fav" data-tab="fav">Избранное<span class="count" id="favCount" hidden></span></a>
     </nav>
   </div>
@@ -607,8 +627,8 @@ function renderBetRows(){
     if(dk!==lastDay){html+=`<div class="day">${dayStr(t)}</div>`;lastDay=dk}
     const H=TEAMS[b0.h],A=TEAMS[b0.a],C=COMPS[b0.c];
     html+=`<div class="comp bet-m"><div class="bet-h" data-match="${esc(b0.mid)}"><span class="bet-t">${timeStr(t)}</span><b>${esc(H?H.name:b0.h)} – ${esc(A?A.name:b0.a)}</b><small>${esc(C?C.name:b0.c)}</small></div>
-      <table class="bet-tb"><thead><tr><th>Ставка</th><th>Кэф</th><th>Шанс</th><th class="hide-s">Модель / факты / рынок</th><th class="hide-s">Справ.</th><th>Перевес</th></tr></thead><tbody>
-      ${g.sort((x,y)=>y.ev-x.ev).map(b=>`<tr><td>${esc(b.label)}${b.push>0.005?` <small class="muted">возврат ${pct(b.push)}</small>`:""}</td><td><b>${b.odds.toFixed(2)}</b></td><td>${pct(b.p)}</td><td class="hide-s muted">${pct(b.pm)} / ${pct(b.pf)} / ${pct(b.pk)}</td><td class="hide-s">${b.fair.toFixed(2)}</td><td class="${b.ev>=0?"pos":"neg"}">${b.ev>=0?"+":""}${Math.round(b.ev*100)}%${b.ev>0.25?' <b class="sus" title="Подозрительно большой перевес">!</b>':""}</td></tr>`).join("")}
+      <table class="bet-tb"><thead><tr><th class="tk"></th><th>Ставка</th><th>Кэф</th><th>Шанс</th><th class="hide-s">Модель / факты / рынок</th><th class="hide-s">Справ.</th><th>Перевес</th></tr></thead><tbody>
+      ${g.sort((x,y)=>y.ev-x.ev).map(b=>`<tr><td class="tk">${trackBtn(b)}</td><td>${esc(b.label)}${b.push>0.005?` <small class="muted">возврат ${pct(b.push)}</small>`:""}</td><td><b>${b.odds.toFixed(2)}</b></td><td>${pct(b.p)}</td><td class="hide-s muted">${pct(b.pm)} / ${pct(b.pf)} / ${pct(b.pk)}</td><td class="hide-s">${b.fair.toFixed(2)}</td><td class="${b.ev>=0?"pos":"neg"}">${b.ev>=0?"+":""}${Math.round(b.ev*100)}%${b.ev>0.25?' <b class="sus" title="Подозрительно большой перевес">!</b>':""}</td></tr>`).join("")}
       </tbody></table></div>`;
   }
   box.innerHTML=html;
@@ -633,22 +653,136 @@ function renderCards(box,n){
 main.addEventListener("click",e=>{const k=e.target.closest("[data-bkind]");if(!k)return;BF.kind=k.dataset.bkind;saveBF();
   document.querySelectorAll("#bkind button").forEach(x=>x.classList.toggle("on",x.dataset.bkind===BF.kind));renderBetRows()});
 
+
+/* ---------- учёт ставок ---------- */
+const STAKE=1000;
+let TRACK={};
+try{TRACK=JSON.parse(localStorage.getItem("track")||"{}")||{}}catch(e){TRACK={}}
+function saveTrack(){try{localStorage.setItem("track",JSON.stringify(TRACK))}catch(e){}}
+const betId=b=>b.m?[b.mid,...b.m].join("|"):null;
+function trackBtn(b){
+  const id=betId(b);if(!id)return"";
+  const on=!!TRACK[id],locked=Date.parse(b.t)<=Date.now();
+  return `<button class="trk${on?" on":""}" data-track="${esc(id)}" ${locked&&on?"disabled":""} title="${on?"Убрать из учёта":"Учитывать в статистике"}">${on?"✓":"+"}</button>`;
+}
+function betById(id){return (VALUE&&VALUE.bets||[]).find(b=>betId(b)===id)}
+main.addEventListener("click",e=>{
+  const el=e.target.closest("[data-track]");if(!el)return;e.stopPropagation();
+  const id=el.dataset.track;
+  if(TRACK[id]){if(Date.parse(TRACK[id].t)<=Date.now())return;delete TRACK[id]}
+  else{const b=betById(id);if(!b||Date.parse(b.t)<=Date.now())return;
+    TRACK[id]={id,mid:b.mid,c:b.c,t:b.t,h:b.h,a:b.a,label:b.label,kind:b.kind,odds:b.odds,p:b.p,ev:b.ev,fair:b.fair,m:b.m,added:new Date().toISOString()}}
+  saveTrack();
+  if(location.hash==="#/track")renderTrack();
+  else{el.classList.toggle("on",!!TRACK[id]);el.textContent=TRACK[id]?"✓":"+"}
+},true);
+function payLine(x,line,over){
+  if(Math.abs((line*4)%2)===1){const a=payLine(x,line-0.25,over),b=payLine(x,line+0.25,over);return[(a[0]+b[0])/2,(a[1]+b[1])/2]}
+  const d=over?x-line:line-x;return d>0?[1,0]:d===0?[0,1]:[0,0];
+}
+function settleBet(t){
+  const m=MBYID[t.mid];if(!m||!m.done)return null;
+  const [mt,per,line,oc]=t.m;const P={fulltime:"",p1:"1",p2:"2"}[per];if(P==null)return null;
+  const H=m.stats.h,A=m.stats.a,over=oc==="Over";
+  const v=(k,team)=>{const x=team===0?H[k]:team===1?A[k]:(H[k]!=null&&A[k]!=null?H[k]+A[k]:null);return x};
+  const res=b=>b?[1,0]:[0,0];
+  let r=null;
+  const st=(base,team)=>{const x=v(base+P,team);return x==null?null:payLine(x,line,over)};
+  if(mt==="totals")r=st("g");
+  else if(mt==="teamtotals-team1")r=st("g",0);
+  else if(mt==="teamtotals-team2")r=st("g",1);
+  else if(mt==="totals-corners")r=st("c");
+  else if(mt==="teamtotals-corners-team1")r=st("c",0);
+  else if(mt==="teamtotals-corners-team2")r=st("c",1);
+  else if(mt==="totals-cards")r=st("y");
+  else if(mt==="teamtotals-cards-team1")r=st("y",0);
+  else if(mt==="teamtotals-cards-team2")r=st("y",1);
+  else{
+    const i=v("g"+P,0),j=v("g"+P,1);if(i==null||j==null)return null;
+    if(mt==="bothteamsscore")r=res((i>0&&j>0)===(oc==="Yes"));
+    else if(mt==="toscore-team1")r=res((i>0)===(oc==="Yes"));
+    else if(mt==="toscore-team2")r=res((j>0)===(oc==="Yes"));
+    else if(mt==="1x2")r=res(oc==="1"?i>j:oc==="2"?j>i:i===j);
+    else if(mt==="doublechance")r=res(oc==="1X"?i>=j:oc==="12"?i!==j:j>=i);
+    else if(mt==="drawnobet")r=i===j?[0,1]:res(oc==="1"?i>j:j>i);
+  }
+  return r;
+}
+function trackRows(){
+  return Object.values(TRACK).map(t=>{const r=settleBet(t);const profit=r?STAKE*(r[0]*t.odds+r[1]-1):null;
+    const out=!r?(Date.parse(t.t)>Date.now()?"wait":(MBYID[t.mid]&&MBYID[t.mid].done?"nodata":"live")):r[0]===1?"win":r[0]>0?"halfwin":r[1]===1?"push":r[1]>0?"halflose":"lose";
+    return{...t,r,profit,out}}).sort((a,b)=>Date.parse(b.t)-Date.parse(a.t));
+}
+const OUT_TXT={win:"Прошла",halfwin:"Половина выигрыша",push:"Возврат",halflose:"Половина проигрыша",lose:"Не прошла",wait:"Ждёт матча",live:"Идёт / ждёт результата",nodata:"Нет данных"};
+const money=v=>(v>0?"+":v<0?"−":"")+Math.abs(Math.round(v)).toLocaleString("ru-RU")+" ₽";
+function aggRows(rows,keyFn,order){
+  const g=new Map();for(const r of rows){const k=keyFn(r);if(!g.has(k))g.set(k,[]);g.get(k).push(r)}
+  const keys=order?order.filter(k=>g.has(k)):[...g.keys()];
+  return keys.map(k=>{const a=g.get(k),n=a.length,profit=a.reduce((s,x)=>s+x.profit,0),w=a.filter(x=>x.out==="win"||x.out==="halfwin").length,
+    exp=a.reduce((s,x)=>s+STAKE*x.ev,0);return{k,n,w,profit,roi:profit/(n*STAKE),exp}});
+}
+function aggTable(title,data){
+  if(!data.length)return"";
+  return `<div class="panel trk-agg"><h3>${title}</h3><table class="bet-tb"><thead><tr><th></th><th>Ставок</th><th>Прошло</th><th>Прибыль</th><th>ROI</th><th class="hide-s">Ожидали</th></tr></thead><tbody>
+  ${data.map(d=>`<tr><td>${esc(d.k)}</td><td>${d.n}</td><td>${d.w} (${Math.round(d.w/d.n*100)}%)</td><td class="${d.profit>=0?"pos":"negr"}">${money(d.profit)}</td><td class="${d.roi>=0?"pos":"negr"}">${d.roi>=0?"+":""}${Math.round(d.roi*100)}%</td><td class="hide-s muted">${money(d.exp)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+const KIND_NAME=Object.fromEntries(KINDS);
+function renderTrack(){
+  const rows=trackRows(),done=rows.filter(r=>r.r),pend=rows.filter(r=>!r.r);
+  const n=done.length,profit=done.reduce((s,x)=>s+x.profit,0),w=done.filter(x=>x.out==="win"||x.out==="halfwin").length;
+  const avgOdds=n?done.reduce((s,x)=>s+x.odds,0)/n:0,exp=done.reduce((s,x)=>s+STAKE*x.ev,0);
+  const oddsBand=r=>r.odds<1.6?"до 1.60":r.odds<1.8?"1.60–1.79":r.odds<2.1?"1.80–2.09":"2.10+";
+  const evBand=r=>r.ev<0.05?"до 5%":r.ev<0.1?"5–10%":r.ev<0.2?"10–20%":"20%+";
+  let html=`<div class="panel"><div class="trk-sum">
+    <div><b>${n}</b><span>рассчитано</span></div>
+    <div><b>${n?Math.round(w/n*100)+"%":"—"}</b><span>прошло</span></div>
+    <div><b class="${profit>=0?"pos":"negr"}">${money(profit)}</b><span>прибыль по ${STAKE} ₽</span></div>
+    <div><b class="${profit>=0?"pos":"negr"}">${n?(profit>=0?"+":"")+Math.round(profit/(n*STAKE)*100)+"%":"—"}</b><span>ROI</span></div>
+    <div><b>${n?avgOdds.toFixed(2):"—"}</b><span>средний кэф</span></div>
+    <div><b>${money(exp)}</b><span>ожидали по модели</span></div>
+  </div><p class="cmp-note">Ставки добавляются кнопкой «+» на вкладке «Ставки». До начала матча ставку можно убрать, после — она фиксируется. Результат считается сам, когда матч появится в базе. Учёт хранится в этом браузере — для переноса на другое устройство есть «Перенос» внизу.</p></div>`;
+  if(n){
+    html+=aggTable("По виду ставки",aggRows(done,r=>KIND_NAME[r.kind]||r.kind));
+    html+=aggTable("По кэфу",aggRows(done,oddsBand,["до 1.60","1.60–1.79","1.80–2.09","2.10+"]));
+    html+=aggTable("По перевесу",aggRows(done,evBand,["до 5%","5–10%","10–20%","20%+"]));
+    html+=aggTable("По турниру",aggRows(done,r=>(COMPS[r.c]||{name:r.c}).name));
+  }
+  const list=(title,a)=>!a.length?"":`<div class="day">${title}</div><div class="comp bet-m"><table class="bet-tb trk-list"><thead><tr><th class="tk"></th><th>Матч / ставка</th><th>Кэф</th><th class="hide-s">Перевес</th><th>Итог</th></tr></thead><tbody>
+    ${a.map(r=>{const H=TEAMS[r.h],A=TEAMS[r.a],locked=Date.parse(r.t)<=Date.now();
+      return `<tr data-match="${esc(r.mid)}"><td class="tk">${locked?"":`<button class="trk on" data-track="${esc(r.id)}" title="Убрать из учёта">✓</button>`}</td>
+      <td><small class="muted">${shortDate(new Date(r.t))} ${timeStr(Date.parse(r.t))} · ${esc(H?H.name:r.h)} – ${esc(A?A.name:r.a)}</small><br>${esc(r.label)}</td>
+      <td><b>${r.odds.toFixed(2)}</b></td><td class="hide-s">${r.ev>=0?"+":""}${Math.round(r.ev*100)}%</td>
+      <td class="out ${r.out}">${r.r?money(r.profit):OUT_TXT[r.out]}${r.r?`<br><small>${OUT_TXT[r.out]}</small>`:""}</td></tr>`}).join("")}</tbody></table></div>`;
+  html+=list("Ждут результата",pend.sort((a,b)=>Date.parse(a.t)-Date.parse(b.t)));
+  html+=list("Рассчитанные",done);
+  if(!rows.length)html+='<div class="fav-empty"><p>Пока пусто. На вкладке «Ставки» нажми «+» у ставки, которую хочешь учитывать.</p></div>';
+  html+=`<details class="panel trk-io"><summary>Перенос на другое устройство</summary>
+    <p class="cmp-note">Скопируй код и вставь его на другом устройстве в это же поле, затем «Загрузить» — ставки объединятся.</p>
+    <textarea id="trkCode" rows="3">${esc(btoa(unescape(encodeURIComponent(JSON.stringify(TRACK)))))}</textarea>
+    <div class="trk-btns"><button id="trkCopy">Скопировать</button><button id="trkLoad">Загрузить</button></div></details>`;
+  main.innerHTML=html;
+  document.getElementById("trkCopy").onclick=()=>{const t=document.getElementById("trkCode");t.select();try{navigator.clipboard.writeText(t.value)}catch(e){document.execCommand("copy")}};
+  document.getElementById("trkLoad").onclick=()=>{try{const d=JSON.parse(decodeURIComponent(escape(atob(document.getElementById("trkCode").value.trim()))));
+    Object.assign(TRACK,d);saveTrack();renderTrack()}catch(e){document.getElementById("trkCode").classList.add("bad")}};
+}
+
 /* ---------- router ---------- */
 let route="";
 function render(){
   const h=location.hash||"#/";route=h;
-  document.querySelectorAll(".tabs a").forEach(a=>a.classList.toggle("on",(a.dataset.tab==="fav"&&h==="#/fav")||(a.dataset.tab==="bets"&&h==="#/bets")||(a.dataset.tab==="list"&&(h==="#/"||h==="#"))));
+  document.querySelectorAll(".tabs a").forEach(a=>a.classList.toggle("on",(a.dataset.tab==="fav"&&h==="#/fav")||(a.dataset.tab==="bets"&&h==="#/bets")||(a.dataset.tab==="track"&&h==="#/track")||(a.dataset.tab==="list"&&(h==="#/"||h==="#"))));
   updateFavCount();
   let mm;
   if(h==="#/fav")renderFav();
   else if(h==="#/bets")renderBets();
+  else if(h==="#/track")renderTrack();
   else if(mm=h.match(/^#\/match\/(.+)$/))renderMatch(mm[1]);
   else if(mm=h.match(/^#\/team\/(.+)$/))renderTeam(mm[1]);
   else renderList();
 }
 let lastRoute="";
 window.addEventListener("hashchange",()=>{render();if(route!==lastRoute)window.scrollTo(0,0);lastRoute=route});
-setInterval(()=>{if(!/^#\/(team|bets)/.test(location.hash))render()},30000);
+setInterval(()=>{if(!/^#\/(team|bets|track)/.test(location.hash))render()},30000);
 main.addEventListener("input",e=>{const el=e.target.closest("[data-bf]");if(!el)return;const k=el.dataset.bf;
   BF[k]=el.type==="checkbox"?el.checked:Number(String(el.value).replace(",","."));saveBF();renderBetRows()});
 

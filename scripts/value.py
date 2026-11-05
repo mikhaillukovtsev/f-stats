@@ -424,7 +424,7 @@ def main():
             label = label.replace("@0", team_names[0]).replace("@1", team_names[1])
             bets.append({
                 "mid": best["id"], "c": best["c"], "t": best["t"], "h": best["h"], "a": best["a"],
-                "label": label, "kind": kind, "odds": price,
+                "label": label, "kind": kind, "odds": price, "m": [mtype, period, line, outcome],
                 "p": round(bw, 3), "push": round(bp, 3), "pm": round(w, 3), "po": round(own, 3),
                 "pk": round(mk * (1 - bp), 3) if mk is not None else None,
                 "pf": round(fw, 3) if fw is not None else None,
