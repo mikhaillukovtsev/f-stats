@@ -1,0 +1,18 @@
+name: probe fonbet
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/probe_fonbet.py
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python scripts/probe_fonbet.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fonbet
+          path: fonbet_list.json
+          if-no-files-found: ignore
