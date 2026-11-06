@@ -27,7 +27,7 @@ SEGMENTS = [
     ("sa", r"^Италия\. Серия А(?![0-9])"),
     ("bl", r"^Германия\. Бундеслига(?! ?[0-9])"),
     ("l1", r"^Франция\. Лига 1"),
-    ("pt", r"^Португалия\. Примейра"),
+    ("pt", r"^Португалия\. Премьер-Лига"),
     ("cl", r"^Лига Чемпионов УЕФА"),
     ("el", r"^Лига Европы УЕФА"),
     ("rpl", r"^Россия\. Премьер-Лига"),
@@ -131,9 +131,6 @@ def main():
             if re.search(rx, s.get("name", "")):
                 seg_code[s["id"]] = code
                 break
-    pt = sorted({s.get("name", "") for s in j.get("sports", []) if "Португ" in s.get("name", "")})
-    if pt:
-        print("Сегменты Португалии:", pt)
     horizon = NOW + timedelta(days=HORIZON_DAYS)
     roots = {}
     for e in j.get("events", []):
