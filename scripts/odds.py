@@ -131,6 +131,9 @@ def main():
             if re.search(rx, s.get("name", "")):
                 seg_code[s["id"]] = code
                 break
+    pt = sorted({s.get("name", "") for s in j.get("sports", []) if "Португ" in s.get("name", "")})
+    if pt:
+        print("Сегменты Португалии:", pt)
     horizon = NOW + timedelta(days=HORIZON_DAYS)
     roots = {}
     for e in j.get("events", []):
