@@ -296,7 +296,7 @@ const STAR='<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><
 const BACK='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
 
 /* ---------- data (загружается из data/*.json) ---------- */
-const COLORS={pl:"#6A2C91",ll:"#E0453A",sa:"#1B7FC4",bl:"#C8102E",l1:"#3A5BA9",cl:"#2E4BB8",el:"#F28C00",efl:"#1F8A4C"};
+const COLORS={pl:"#6A2C91",ll:"#E0453A",sa:"#1B7FC4",bl:"#C8102E",l1:"#3A5BA9",pt:"#006847",cl:"#2E4BB8",el:"#F28C00",efl:"#1F8A4C"};
 let COMPS={},ORDER=[],TEAMS={},MATCHES=[],UPCOMING={},NEXT={},MBYID={},STANDINGS={},UPDATED=null;
 function hash(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))|0;return Math.abs(h)}
 function initials(name){
@@ -317,7 +317,7 @@ async function load(){
   UPDATED=meta.updated;ORDER=meta.order;
   for(const c in meta.comps)COMPS[c]={name:meta.comps[c],color:COLORS[c]||"#888"};
   const leagueOf={};
-  for(const c of ["pl","ll","sa","bl","l1","cl","el"])for(const id in (meta.standings[c]||{}))if(!leagueOf[id])leagueOf[id]=c;
+  for(const c of ["pl","ll","sa","bl","l1","pt","cl","el"])for(const id in (meta.standings[c]||{}))if(!leagueOf[id])leagueOf[id]=c;
   for(const id in meta.teams){const t=meta.teams[id];TEAMS[id]={id,name:t.name,league:leagueOf[id]||null,color:`hsl(${hash(t.name)%360} 45% 40%)`,ini:initials(t.name)}}
   for(const c in meta.standings){STANDINGS[c]={};for(const id in meta.standings[c]){const[pos,pts,pl]=meta.standings[c][id];STANDINGS[c][id]={pos,pts,played:pl}}}
   MATCHES=db.matches.filter(m=>TEAMS[m.h]&&TEAMS[m.a]).map(m=>{

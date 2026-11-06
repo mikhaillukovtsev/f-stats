@@ -64,6 +64,11 @@ ALIAS = {
     "ференцварош": "ferencvaros", "црвена звезда": "crvena zvezda", "янг бойз": "young boys",
     "штутгарт": "vfb stuttgart", "фрайбург": "freiburg", "хоффенхайм": "hoffenheim", "майнц": "mainz",
     "унион берлин": "union berlin", "вердер": "werder bremen", "санкт паули": "st pauli",
+    "витория гимарайнш": "vitoria guimaraes", "витория": "vitoria guimaraes", "жил висенте": "gil vicente",
+    "эшторил": "estoril", "риу ави": "rio ave", "насьонал": "nacional", "эштрела": "estrela amadora",
+    "эштрела амадора": "estrela amadora", "авеш": "avs", "брага": "braga", "фамаликан": "famalicao",
+    "санта клара": "santa clara", "каза пия": "casa pia", "морейренсе": "moreirense", "тондела": "tondela",
+    "алверка": "alverca", "арока": "arouca",
 }
 
 
