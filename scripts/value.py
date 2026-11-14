@@ -20,6 +20,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
 NOW = datetime.now(timezone.utc)
 MIN_MATCHES = 5          # меньше матчей в истории — команду не считаем
+MIN_MATCHES_NT = 3       # сборные: в Лиге наций всего 6 туров
 MARKET_W = 0.5
 AGREE = 0.12             # насколько модель и факты могут расходиться
 VENUE_W = 0.6            # вес домашних/выездных матчей в средних
@@ -166,9 +167,9 @@ def val(d, k, i=0):
     return v[i] if v else None
 
 
-def model_old(T, h, a):
+def model_old(T, h, a, min_n=MIN_MATCHES):
     ha, aa, hh, av = T.side(h), T.side(a), T.side(h, "H"), T.side(a, "A")
-    if len(ha) < MIN_MATCHES or len(aa) < MIN_MATCHES:
+    if len(ha) < min_n or len(aa) < min_n:
         return None
     lam = {}
     for k in ("g", "xg", "c", "y"):
@@ -301,9 +302,9 @@ def ref_factor(ref):
     return (n * ref["yc"] + REF_K * ref["avg"]) / ((n + REF_K) * ref["avg"])
 
 
-def model_for(T, h, a, R=None, ref=None):
+def model_for(T, h, a, R=None, ref=None, min_n=MIN_MATCHES):
     """Новая модель: λ = база × атака × оборона соперника (рейтинги с затуханием по времени)."""
-    old = model_old(T, h, a)
+    old = model_old(T, h, a, min_n)
     if not old or not R:
         return old
     lam = {}
@@ -430,7 +431,7 @@ def fact(model, fspec):
     def mean(rows, f):
         vs = [f(o, p) for o, p in rows]
         vs = [v for v in vs if v is not None]
-        if len(vs) < MIN_MATCHES:
+        if len(vs) < MIN_MATCHES_NT:
             return None
         return (sum(v[0] for v in vs) / len(vs), sum(v[1] for v in vs) / len(vs), len(vs))
 
@@ -541,7 +542,8 @@ def main():
             print(f"  не сопоставлен: {f['c']} {f['t']} {f['n1']} – {f['n2']}")
             continue
         matched += 1
-        model = model_for(T, best["h"], best["a"], R, refs.get(str(best["id"])))
+        model = model_for(T, best["h"], best["a"], R, refs.get(str(best["id"])),
+                          MIN_MATCHES_NT if best["c"].startswith("nl") else MIN_MATCHES)
         if not model:
             continue
         old = model.get("old")
@@ -617,7 +619,8 @@ def main():
         t = ts(m["t"])
         if not (NOW < t < NOW + timedelta(days=7)) or m["c"] == "rpl":
             continue
-        model = model_for(T, m["h"], m["a"], R, refs.get(str(m["id"])))
+        model = model_for(T, m["h"], m["a"], R, refs.get(str(m["id"])),
+                          MIN_MATCHES_NT if m["c"].startswith("nl") else MIN_MATCHES)
         if not model:
             continue
         tn = (names[m["h"]]["name"], names[m["a"]]["name"])
