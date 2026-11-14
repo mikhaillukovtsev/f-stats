@@ -69,6 +69,21 @@ ALIAS = {
     "эштрела амадора": "estrela amadora", "авеш": "avs", "брага": "braga", "фамаликан": "famalicao",
     "санта клара": "santa clara", "каза пия": "casa pia", "морейренсе": "moreirense", "тондела": "tondela",
     "алверка": "alverca", "арока": "arouca",
+    # сборные
+    "германия": "germany", "франция": "france", "италия": "italy", "испания": "spain", "англия": "england",
+    "португалия": "portugal", "нидерланды": "netherlands", "бельгия": "belgium", "хорватия": "croatia",
+    "дания": "denmark", "швейцария": "switzerland", "австрия": "austria", "польша": "poland",
+    "чехия": "czechia", "сербия": "serbia", "греция": "greece", "турция": "turkiye", "венгрия": "hungary",
+    "шотландия": "scotland", "уэльс": "wales", "северная ирландия": "northern ireland", "ирландия": "ireland",
+    "норвегия": "norway", "швеция": "sweden", "финляндия": "finland", "исландия": "iceland",
+    "украина": "ukraine", "словакия": "slovakia", "словения": "slovenia", "румыния": "romania",
+    "болгария": "bulgaria", "босния и герцеговина": "bosnia and herzegovina", "черногория": "montenegro",
+    "северная македония": "north macedonia", "албания": "albania", "косово": "kosovo", "грузия": "georgia",
+    "армения": "armenia", "азербайджан": "azerbaijan", "казахстан": "kazakhstan", "израиль": "israel",
+    "кипр": "cyprus", "мальта": "malta", "люксембург": "luxembourg", "литва": "lithuania", "латвия": "latvia",
+    "эстония": "estonia", "белоруссия": "belarus", "беларусь": "belarus", "молдова": "moldova",
+    "фарерские острова": "faroe islands", "андорра": "andorra", "сан марино": "san marino",
+    "лихтенштейн": "liechtenstein", "гибралтар": "gibraltar", "россия": "russia",
 }
 
 
