@@ -87,6 +87,11 @@ ALIAS = {
 }
 
 
+def cgrp(code):
+    """Лиги наций A–D у Фонбета идут одним турниром."""
+    return "nl" if code.startswith("nl") else code
+
+
 def ru2lat(name):
     s = name.lower().replace("ё", "е").replace("-", " ").replace(".", "")
     s = re.sub(r"\s+", " ", s).strip()
@@ -511,7 +516,7 @@ def main():
     for f in odds["fixtures"]:
         t = ts(f["t"])
         n1, n2 = ru2lat(f["n1"]), ru2lat(f["n2"])
-        slot = [m for m in ours if m["c"] == f["c"] and abs((ts(m["t"]) - t).total_seconds()) <= 3 * 3600]
+        slot = [m for m in ours if cgrp(m["c"]) == cgrp(f["c"]) and abs((ts(m["t"]) - t).total_seconds()) <= 3 * 3600]
         for m in slot:
             sc = sim(names[m["h"]]["name"], n1) + sim(names[m["a"]]["name"], n2)
             cand.append((sc + (0.3 if len(slot) == 1 else 0), id(f), m["id"], m))
