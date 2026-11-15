@@ -555,7 +555,7 @@ def main():
         def market_p(mtype, period, line, price):
             ps = grp.get((mtype, period, line), [])
             target = 2.0 if mtype == "doublechance" else 1.0
-            if mtype.startswith("1x2") and len(ps) < 3 or mtype != "1x2" and mtype != "doublechance" and len(ps) < 2:
+            if (mtype.startswith("1x2") or mtype == "doublechance") and len(ps) != 3 or len(ps) < 2:
                 return None
             tot = sum(1 / x for x in ps)
             return (1 / price) * target / tot if tot else None
