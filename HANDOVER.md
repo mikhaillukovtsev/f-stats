@@ -33,6 +33,9 @@ scripts/update.py          статистика с FotMob (неофициаль�
 scripts/odds.py            линия Фонбета (публичная лента fon.bet)
 scripts/value.py           модель, перевесы -> data/value.json
 scripts/tracklog.py        журнал всех прогнозов и их результатов
+scripts/match_report.py    справка по матчу для описания ставки (для ChatGPT)
+scripts/analyze_log.py     проверка модели по журналу (для ChatGPT)
+GPT_INSTRUCTIONS.md        как работать с проектом через ChatGPT
 .github/workflows/update.yml   запуск каждый час: update -> odds -> value -> commit
 data/meta.json             турниры, туры, таблицы, команды
 data/matches.json          сыгранные матчи за 90 дней со статистикой
